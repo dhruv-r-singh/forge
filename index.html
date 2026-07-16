@@ -755,12 +755,12 @@
 <script>
 // ---------------- FIREBASE ----------------
 const firebaseConfig = {
-  apiKey: "AIzaSyDgsxX9xIvflOVEFMzf9FcnJwSjtiFfuBw",
-  authDomain: "forge-drs.firebaseapp.com",
-  projectId: "forge-drs",
-  storageBucket: "forge-drs.firebasestorage.app",
-  messagingSenderId: "59927365316",
-  appId: "1:59927365316:web:99f47363c8a18f999eeb91"
+  apiKey: "AIzaSyB3SOG984SYtUyLmW4YyaknqcMpdj29i_0",
+  authDomain: "test123-drub.firebaseapp.com",
+  projectId: "test123-drub",
+  storageBucket: "test123-drub.firebasestorage.app",
+  messagingSenderId: "883783514244",
+  appId: "1:883783514244:web:69b11a9226ac0dffb56ad1"
 };
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
@@ -773,7 +773,10 @@ const db = firebase.firestore();
 // reliably catching this — forcing long-polling, and also falling back to XMLHttpRequest
 // instead of fetch() streaming, since some networks/proxies mishandle fetch-based streaming
 // in a way that causes silent hangs rather than a clean error.
-db.settings({ experimentalForceLongPolling: true, useFetchStreams: false });
+// Keeping a light auto-detect fallback for long-polling as general good practice —
+// the forced/fetch-stream workarounds are no longer needed now that we're off the
+// Enterprise-edition project that was actually causing the connection issues.
+db.settings({ experimentalAutoDetectLongPolling: true });
 const googleProvider = new firebase.auth.GoogleAuthProvider();
 let currentUser = null;
 
