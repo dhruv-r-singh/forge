@@ -825,26 +825,15 @@ async function ensureUserDoc(){
   }catch(e){ console.error('ensureUserDoc error', e); return false; }
 }
 
-// Writes a doc to the `mail` collection, which the Firebase "Trigger Email from Firestore"
-// extension picks up and actually sends. Without that extension installed, this doc just
-// sits there unsent — it does not fail loudly, so check the `mail` collection in Firestore
-// if emails aren't arriving.
+// Calls a small serverless endpoint (Vercel) that sends the email via Resend.
+// The Resend API key lives server-side in that function — never in this file.
 async function sendWelcomeEmail(){
   if(!currentUser.email) return; // phone-auth accounts have no email to send to
-  const first = (currentUser.displayName || currentUser.email.split('@')[0]).split(' ')[0];
   try{
-    await db.collection('mail').add({
-      to: [currentUser.email],
-      message: {
-        subject: 'Welcome to FORGE 🔥',
-        text: 'Hey '+first+',\n\nWelcome to FORGE — your training just got a command center. Build a workout plan, log your first session, and start climbing the ranks.\n\nSee you on the leaderboard.\n— FORGE',
-        html: '<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#0A0F1C;color:#E7ECF5;border-radius:12px;">'
-          + '<h2 style="color:#FFB454;margin-top:0;">Welcome to FORGE, '+first+' 🔥</h2>'
-          + '<p style="line-height:1.6;">Your training just got a command center. Build a workout plan, log your first session, and start climbing the ranks.</p>'
-          + '<p style="line-height:1.6;">See you on the leaderboard.</p>'
-          + '<p style="color:#7C8AA8;">— FORGE</p>'
-          + '</div>'
-      }
+    await fetch('https://forge-mail-api.vercel.app/api/welcome-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: currentUser.email, name: currentUser.displayName || '' })
     });
   }catch(e){ console.error('sendWelcomeEmail error', e); }
 }
