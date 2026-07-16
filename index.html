@@ -350,13 +350,8 @@
 <body>
 <div id="login-screen">
   <svg class="brand-mark brand-mark-lg" viewBox="0 0 100 100" fill="none">
-    <path d="M50,10 C42,18 34,26 34,38 C34,48 41,55 50,55 C59,55 66,48 66,38 C66,28 60,22 55,16 C57,24 52,28 49,22 C47,17 50,13 50,10 Z" fill="url(#anvilFlameGrad)"/>
-    <rect x="0" y="68" width="9" height="4" rx="2" fill="var(--dim)"/>
-    <rect x="91" y="68" width="9" height="4" rx="2" fill="var(--dim)"/>
-    <path d="M12,64 L38,58 L82,58 L82,66 L64,66 L64,72 L84,72 L84,84 L16,84 L16,72 L36,72 L36,66 L18,66 Z" fill="var(--text)"/>
-    <defs><linearGradient id="anvilFlameGrad" x1="34" y1="10" x2="66" y2="55" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFB454"/><stop offset="1" stop-color="#FF6B4A"/>
-    </linearGradient></defs>
+    <path d="M50,7 C37,20 29,33 29,45 C29,56 38,63 50,63 C62,63 71,56 71,45 C71,34 63,25 57,18 C59,27 53,32 50,25 C48,20 50,13 50,7 Z" fill="#FF9D42"/>
+    <path d="M10,63 L37,57 L84,57 L84,65 L66,65 L66,71 L86,71 L86,84 L14,84 L14,71 L34,71 L34,65 L16,65 Z" fill="var(--text)"/>
   </svg>
   <div class="login-logo">FORGE</div>
   <div class="login-tag">Train. Track. Together.</div>
@@ -409,11 +404,8 @@
     <div class="hud-top">
       <div class="hud-title" style="display:flex; align-items:center; gap:7px;">
         <svg class="brand-mark" viewBox="0 0 100 100" fill="none">
-          <path d="M50,10 C42,18 34,26 34,38 C34,48 41,55 50,55 C59,55 66,48 66,38 C66,28 60,22 55,16 C57,24 52,28 49,22 C47,17 50,13 50,10 Z" fill="url(#anvilFlameGradSm)"/>
-          <rect x="0" y="68" width="9" height="4" rx="2" fill="var(--dim)"/>
-          <rect x="91" y="68" width="9" height="4" rx="2" fill="var(--dim)"/>
-          <path d="M12,64 L38,58 L82,58 L82,66 L64,66 L64,72 L84,72 L84,84 L16,84 L16,72 L36,72 L36,66 L18,66 Z" fill="var(--text)"/>
-          <defs><linearGradient id="anvilFlameGradSm" x1="34" y1="10" x2="66" y2="55" gradientUnits="userSpaceOnUse"><stop stop-color="#FFB454"/><stop offset="1" stop-color="#FF6B4A"/></linearGradient></defs>
+          <path d="M50,7 C37,20 29,33 29,45 C29,56 38,63 50,63 C62,63 71,56 71,45 C71,34 63,25 57,18 C59,27 53,32 50,25 C48,20 50,13 50,7 Z" fill="#FF9D42"/>
+          <path d="M10,63 L37,57 L84,57 L84,65 L66,65 L66,71 L86,71 L86,84 L14,84 L14,71 L34,71 L34,65 L16,65 Z" fill="var(--text)"/>
         </svg>
         FORGE
       </div>
@@ -603,11 +595,13 @@
           <label>Create a Clan</label>
           <input id="clan-name-input" placeholder="Clan name">
           <button class="btn-primary" onclick="createClan()">Create Clan</button>
+          <div id="create-clan-status" class="mono" style="font-size:11px; margin-top:8px; min-height:14px;"></div>
         </div>
         <div class="card">
           <label>Join with Code</label>
           <input id="clan-code-input" placeholder="6-character code" style="text-transform:uppercase;">
           <button class="btn-primary" onclick="joinClan()">Join Clan</button>
+          <div id="join-clan-status" class="mono" style="font-size:11px; margin-top:8px; min-height:14px;"></div>
         </div>
       </div>
 
@@ -703,6 +697,14 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="confirm-modal-overlay" style="align-items:center;">
+    <div class="modal-sheet" style="border-radius:18px; max-width:300px; text-align:center;">
+      <div id="confirm-modal-text" style="font-size:13.5px; color:var(--text); line-height:1.5; margin-bottom:18px;"></div>
+      <button class="danger-btn" id="confirm-modal-yes" style="margin-bottom:8px;">Confirm</button>
+      <button class="btn-ghost" id="confirm-modal-cancel" style="width:100%;">Cancel</button>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="rank-modal-overlay" style="align-items:center;" onclick="if(event.target===this) closeRankModal()">
     <div class="modal-sheet" style="border-radius:18px; max-width:320px;">
       <button class="modal-close" onclick="closeRankModal()">×</button>
@@ -726,6 +728,7 @@
       <div style="font-size:12.5px; color:var(--dim); margin-bottom:16px;">Tell us a bit about yourself to personalize FORGE.</div>
       <label>Name</label>
       <input id="setup-name" placeholder="Your name">
+      <div id="setup-status" class="mono" style="font-size:11px; color:var(--red); margin:-6px 0 8px 0; min-height:14px;"></div>
       <label>Height (in)</label>
       <input id="setup-height" type="number" inputmode="decimal" placeholder="e.g. 70">
       <label>Weight (lbs)</label>
@@ -1024,6 +1027,24 @@ function showToast(text){
   clearTimeout(window._actionToastTimer);
   window._actionToastTimer = setTimeout(()=>el.classList.remove('show'), 1400);
 }
+// Native confirm()/alert() get silently blocked in a lot of embedded browsers and PWA
+// contexts — this is a real in-app modal instead, so "are you sure?" prompts actually show up.
+function showConfirm(message){
+  return new Promise((resolve)=>{
+    document.getElementById('confirm-modal-text').textContent = message;
+    const overlay = document.getElementById('confirm-modal-overlay');
+    const yesBtn = document.getElementById('confirm-modal-yes');
+    const cancelBtn = document.getElementById('confirm-modal-cancel');
+    overlay.classList.add('open');
+    function cleanup(result){
+      overlay.classList.remove('open');
+      yesBtn.onclick = null; cancelBtn.onclick = null;
+      resolve(result);
+    }
+    yesBtn.onclick = ()=>cleanup(true);
+    cancelBtn.onclick = ()=>cleanup(false);
+  });
+}
 async function saveXpToFirestore(){
   persistLocalState();
   if(!currentUser) return;
@@ -1155,7 +1176,7 @@ function recordStreak(){
 }
 
 async function confirmResetProgress(){
-  if(!confirm('This permanently deletes all your workouts, food logs, workout plans, and XP. This can\'t be undone. Continue?')) return;
+  if(!(await showConfirm('This permanently deletes all your workouts, food logs, workout plans, and XP. This can\'t be undone. Continue?'))) return;
   let serverError = false;
   try{
     const deletes = [];
@@ -1176,7 +1197,7 @@ async function confirmResetProgress(){
   renderAll();
   switchWorkoutView('today');
   if(serverError){
-    alert('Reset locally, but some data may not have cleared on the server — check your connection and try again if old data reappears after a refresh.');
+    showToast('Reset locally, but server sync may have failed — check your connection.');
   }
 }
 
@@ -1210,7 +1231,7 @@ function openProfileSetup(){
 }
 async function submitProfileSetup(){
   const name = document.getElementById('setup-name').value.trim();
-  if(!name){ alert('Enter a name to continue.'); return; }
+  if(!name){ document.getElementById('setup-status').textContent = 'Enter a name to continue.'; return; }
   const height = document.getElementById('setup-height').value;
   const weight = document.getElementById('setup-weight').value;
   const age = document.getElementById('setup-age').value;
@@ -1656,7 +1677,7 @@ function removePlanExercise(idx){
 }
 async function deletePlan(){
   if(!planEditId) return;
-  if(!confirm('Delete this workout? This cannot be undone.')) return;
+  if(!(await showConfirm('Delete this workout? This cannot be undone.'))) return;
   STATE.plans = STATE.plans.filter(p=>p.id!==planEditId);
   planEditId = null;
   await savePlansToFirestore();
@@ -1667,7 +1688,7 @@ async function deletePlan(){
 function startSession(planId){
   const plan = getPlan(planId);
   if(!plan) return;
-  if(plan.exercises.length===0){ alert('Add exercises to this workout first.'); openPlanDetail(planId); return; }
+  if(plan.exercises.length===0){ showToast('Add exercises to this workout first.'); openPlanDetail(planId); return; }
   activeSession = {
     planId: plan.id,
     planName: plan.name,
@@ -1723,9 +1744,9 @@ function addSessionSet(exIdx){
   saveDraft('forge_draft_session', activeSession);
   renderActiveSession();
 }
-function removeSessionExercise(exIdx){
+async function removeSessionExercise(exIdx){
   const ex = activeSession.exercises[exIdx];
-  if(!confirm('Remove '+ex.name+' from this session?')) return;
+  if(!(await showConfirm('Remove '+ex.name+' from this session?'))) return;
   let refund = 0;
   ex.sets.forEach(s=>{ if(s.done) refund += 5; });
   if(ex.bonusAwarded) refund += 20;
@@ -1776,7 +1797,7 @@ async function finishSession(){
     .map(ex=>({ name: ex.name, exId: ex.exId, sets: ex.sets.filter(s=>s.weight!=='' || s.reps!=='').map(s=>({weight:s.weight, reps:s.reps, done:s.done})) }))
     .filter(ex=>ex.sets.length>0);
   if(loggedExercises.length===0){
-    if(!confirm('No sets logged yet — finish anyway and discard this session?')) return;
+    if(!(await showConfirm('No sets logged yet — finish anyway and discard this session?'))) return;
     activeSession = null;
     localStorage.removeItem('forge_draft_session');
     switchWorkoutView('today');
@@ -2118,8 +2139,10 @@ function showInClanView(){
 }
 
 async function createClan(){
+  const statusEl = document.getElementById('create-clan-status');
   const name = document.getElementById('clan-name-input').value.trim();
-  if(!name) return;
+  if(!name){ statusEl.style.color = 'var(--red)'; statusEl.textContent = 'Enter a clan name first.'; return; }
+  statusEl.style.color = 'var(--dim)'; statusEl.textContent = 'Creating...';
   const code = genClanCode();
   try{
     const clanRef = db.collection('clans').doc();
@@ -2132,17 +2155,24 @@ async function createClan(){
     STATE.clanId = clanRef.id;
     persistLocalState();
     document.getElementById('clan-name-input').value = '';
+    statusEl.textContent = '';
     showInClanView();
     loadClan();
-  }catch(e){ console.error('createClan error', e); alert('Couldn\'t create the clan — ' + (e.message || 'check your connection and try again.')); }
+  }catch(e){
+    console.error('createClan error', e);
+    statusEl.style.color = 'var(--red)';
+    statusEl.textContent = 'Failed: ' + (e.code || e.message || 'unknown error — check your connection.');
+  }
 }
 
 async function joinClan(){
+  const statusEl = document.getElementById('join-clan-status');
   const code = document.getElementById('clan-code-input').value.trim().toUpperCase();
-  if(!code) return;
+  if(!code){ statusEl.style.color = 'var(--red)'; statusEl.textContent = 'Enter a clan code first.'; return; }
+  statusEl.style.color = 'var(--dim)'; statusEl.textContent = 'Looking for that clan...';
   try{
     const q = await db.collection('clans').where('code','==',code).limit(1).get();
-    if(q.empty){ alert('No clan found with that code.'); return; }
+    if(q.empty){ statusEl.style.color = 'var(--red)'; statusEl.textContent = 'No clan found with that code.'; return; }
     const clanDoc = q.docs[0];
     await clanDoc.ref.update({
       [`members.${currentUser.uid}`]: { displayName: currentUser.displayName || 'Athlete', photoURL: currentUser.photoURL || '' }
@@ -2151,9 +2181,14 @@ async function joinClan(){
     STATE.clanId = clanDoc.id;
     persistLocalState();
     document.getElementById('clan-code-input').value = '';
+    statusEl.textContent = '';
     showInClanView();
     loadClan();
-  }catch(e){ console.error('joinClan error', e); alert('Couldn\'t join that clan — ' + (e.message || 'check the code and try again.')); }
+  }catch(e){
+    console.error('joinClan error', e);
+    statusEl.style.color = 'var(--red)';
+    statusEl.textContent = 'Failed: ' + (e.code || e.message || 'unknown error — check the code and try again.');
+  }
 }
 
 async function leaveClan(){
@@ -2166,7 +2201,10 @@ async function leaveClan(){
     STATE.clanId = null;
     persistLocalState();
     showNoClanView();
-  }catch(e){ console.error('leaveClan error', e); alert('Couldn\'t leave the clan — try again.'); }
+  }catch(e){
+    console.error('leaveClan error', e);
+    showToast('Couldn\'t leave the clan — ' + (e.code || 'try again.'));
+  }
 }
 
 function copyClanCode(btn){
@@ -2243,7 +2281,7 @@ async function startTournament(days){
     const clanSnap = await db.collection('clans').doc(STATE.clanId).get();
     const clan = clanSnap.data();
     const memberUids = Object.keys(clan.members||{});
-    if(memberUids.length < 2){ alert('You need at least 2 clan members to start a tournament.'); return; }
+    if(memberUids.length < 2){ showToast('Need at least 2 clan members to start a tournament.'); return; }
     const playerList = memberUids.map(uid=>({uid, name: clan.members[uid].displayName || 'Athlete', photo: clan.members[uid].photoURL || ''}));
     const built = buildTournamentBracket(playerList, days);
     const tournament = {
@@ -2253,7 +2291,7 @@ async function startTournament(days){
     };
     await db.collection('clans').doc(STATE.clanId).update({ tournament });
     loadClan();
-  }catch(e){ console.error('startTournament error', e); alert('Couldn\'t start the tournament — try again.'); }
+  }catch(e){ console.error('startTournament error', e); showToast('Couldn\'t start the tournament — try again.'); }
 }
 
 async function computeVolumeInWindow(uid, startMs, endMs){
