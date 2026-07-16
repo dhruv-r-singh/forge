@@ -927,7 +927,7 @@ auth.onAuthStateChanged(async (user) => {
     document.getElementById('user-name-label').textContent = (user.displayName || (user.email ? user.email.split('@')[0] : user.phoneNumber) || 'Athlete').split(' ')[0];
     const isNewUser = await ensureUserDoc();
     await loadState();
-    if(isNewUser){ openProfileSetup(); } // collect height/weight/age before the tutorial
+    if(isNewUser || STATE.onboarded===false){ openProfileSetup(); } // tutorial only starts once this flow finishes
   } else {
     currentUser = null;
     hasLoadedForUid = null;
@@ -1472,8 +1472,8 @@ async function loadState(){
     STATE.streak = udata.streak || 0;
     STATE.lastWorkoutDate = udata.lastWorkoutDate || null;
     STATE.referralCode = udata.referralCode || '';
+    STATE.onboarded = udata.onboarded !== false; // undefined counts as onboarded (pre-existing accounts)
     if(udata.theme) setTheme(udata.theme, true);
-    if(udata.onboarded===false) startTutorial();
   }catch(e){ console.error('loadState user doc error', e); }
 
   try{
@@ -2256,6 +2256,10 @@ function genClanCode(){
 
 const CLAN_CREATE_RANK_INDEX = 6; // Beast — 7th rank
 const CLAN_JOIN_RANK_INDEX = 2;   // Grinder — 3rd rank
+const CLAN_CREATE_OVERRIDE_EMAILS = ['quantummarsh18@gmail.com']; // always allowed to create a clan, regardless of rank
+function canCreateClan(){
+  return (currentUser && CLAN_CREATE_OVERRIDE_EMAILS.includes((currentUser.email||'').toLowerCase())) || STATE.xp >= RANKS[CLAN_CREATE_RANK_INDEX].min;
+}
 
 function showNoClanView(){
   document.getElementById('clan-no-clan').style.display = 'block';
@@ -2272,7 +2276,7 @@ function renderClanGateContent(){
   if(!el) return;
   const createRank = RANKS[CLAN_CREATE_RANK_INDEX];
   const joinRank = RANKS[CLAN_JOIN_RANK_INDEX];
-  const canCreate = STATE.xp >= createRank.min;
+  const canCreate = canCreateClan();
   const canJoin = STATE.xp >= joinRank.min;
 
   el.innerHTML = `
@@ -2310,7 +2314,7 @@ function renderClanGateContent(){
 
 async function createClan(){
   const statusEl = document.getElementById('create-clan-status');
-  if(STATE.xp < RANKS[CLAN_CREATE_RANK_INDEX].min) return; // gated — button shouldn't even be visible, but double-check
+  if(!canCreateClan()) return; // gated — button shouldn't even be visible, but double-check
   const name = document.getElementById('clan-name-input').value.trim();
   if(!name){ statusEl.style.color = 'var(--red)'; statusEl.textContent = 'Enter a clan name first.'; return; }
   statusEl.style.color = 'var(--dim)'; statusEl.textContent = 'Creating...';
@@ -2487,6 +2491,7 @@ async function startTournament(days){
   try{
     const clanSnap = await db.collection('clans').doc(STATE.clanId).get();
     const clan = clanSnap.data();
+    if(clan.ownerUid !== currentUser.uid){ showToast('Only your clan leader can start a tournament.'); return; }
     const memberUids = Object.keys(clan.members||{});
     if(memberUids.length < 2){ showToast('Need at least 2 clan members to start a tournament.'); return; }
     const playerList = memberUids.map(uid=>({uid, name: clan.members[uid].displayName || 'Athlete', photo: clan.members[uid].photoURL || ''}));
@@ -2589,18 +2594,21 @@ function renderTournamentSection(clan){
   const wrap = document.getElementById('tournament-section');
   if(!wrap) return;
   const t = clan.tournament;
+  const isLeader = currentUser && clan.ownerUid === currentUser.uid;
+  const startPickerHtml = `
+    <label>Duration</label>
+    <div class="duration-row">
+      <button class="duration-btn on" data-d="7" onclick="setTourneyDuration(7)">1 Week</button>
+      <button class="duration-btn" data-d="14" onclick="setTourneyDuration(14)">2 Weeks</button>
+      <button class="duration-btn" data-d="30" onclick="setTourneyDuration(30)">1 Month</button>
+    </div>
+    <button class="btn-primary" onclick="startTournament(tourneyDuration)">Start Tournament</button>`;
   if(!t){
     wrap.innerHTML = `
       <h2 class="section-title">Tournament</h2>
       <div class="card">
         <div style="font-size:12.5px; color:var(--dim); margin-bottom:12px;">Run a bracket tournament — clan members duel it out on logged training volume. Everyone earns XP; winners earn more.</div>
-        <label>Duration</label>
-        <div class="duration-row">
-          <button class="duration-btn on" data-d="7" onclick="setTourneyDuration(7)">1 Week</button>
-          <button class="duration-btn" data-d="14" onclick="setTourneyDuration(14)">2 Weeks</button>
-          <button class="duration-btn" data-d="30" onclick="setTourneyDuration(30)">1 Month</button>
-        </div>
-        <button class="btn-primary" onclick="startTournament(tourneyDuration)">Start Tournament</button>
+        ${isLeader ? startPickerHtml : `<div style="font-size:12px; color:var(--dimmer);">Only your clan leader can start a tournament.</div>`}
       </div>`;
     return;
   }
@@ -2610,19 +2618,13 @@ function renderTournamentSection(clan){
     html += `<div class="tourney-card" style="text-align:center;">
       <div style="font-size:11px; letter-spacing:1.5px; color:var(--amber); text-transform:uppercase; margin-bottom:6px;">Champion</div>
       <div class="display" style="font-size:19px; font-weight:600;">${escapeHtml(champ?champ.name:'—')}</div>
-    </div>
-    <button class="btn-ghost" style="width:100%; margin-bottom:14px;" onclick="document.getElementById('new-tourney-picker').style.display='block'; this.style.display='none';">Start a New Tournament</button>
-    <div id="new-tourney-picker" style="display:none;">
-      <div class="card">
-        <label>Duration</label>
-        <div class="duration-row">
-          <button class="duration-btn on" data-d="7" onclick="setTourneyDuration(7)">1 Week</button>
-          <button class="duration-btn" data-d="14" onclick="setTourneyDuration(14)">2 Weeks</button>
-          <button class="duration-btn" data-d="30" onclick="setTourneyDuration(30)">1 Month</button>
-        </div>
-        <button class="btn-primary" onclick="startTournament(tourneyDuration)">Start Tournament</button>
-      </div>
     </div>`;
+    if(isLeader){
+      html += `<button class="btn-ghost" style="width:100%; margin-bottom:14px;" onclick="document.getElementById('new-tourney-picker').style.display='block'; this.style.display='none';">Start a New Tournament</button>
+      <div id="new-tourney-picker" style="display:none;">
+        <div class="card">${startPickerHtml}</div>
+      </div>`;
+    }
   } else {
     const round = t.rounds[t.currentRound];
     const endsIn = round ? Math.max(0, Math.ceil((round[0].roundEnd - Date.now())/86400000)) : 0;
