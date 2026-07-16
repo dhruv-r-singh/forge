@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>FORGE</title>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-mono/1.0.0/JetBrainsMono-Regular.css" rel="stylesheet" onerror="this.remove()">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-mono/1.0.0/JetBrainsMono-Regular.css" rel="stylesheet" onerror="this.remove()" disabled>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.2/firebase-app-compat.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.2/firebase-auth-compat.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.2/firebase-firestore-compat.min.js"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
 
   :root{
     --bg: #0A0F1C;
@@ -25,10 +25,16 @@
     --dim: #7C8AA8;
     --dimmer: #4C5A78;
   }
+  body[data-theme="steel"]{ --bg:#0B1420; --panel:#131E30; --panel-raised:#18243890; --line:#22304A; --amber:#7FB8FF; --cyan:#9AE6C4; }
+  body[data-theme="ember"]{ --bg:#180D0A; --panel:#241512; --panel-raised:#2E1A1590; --line:#3A231C; --amber:#FF6B4A; --cyan:#FFD166; }
+  body[data-theme="midnight"]{ --bg:#0D0B1A; --panel:#17142B; --panel-raised:#1D1A3590; --line:#2A2650; --amber:#B388FF; --cyan:#64D9E8; }
   *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
-  html,body{margin:0; padding:0; background:var(--bg); color:var(--text); font-family:'Space Grotesk',sans-serif; height:100%; overflow-x:hidden;}
+  html,body{margin:0; padding:0; background:var(--bg); color:var(--text); font-family:'Manrope',sans-serif; height:100%; overflow-x:hidden;}
   body{ padding-bottom: env(safe-area-inset-bottom); }
-  .mono{ font-family:'JetBrains Mono', ui-monospace, monospace; }
+  .mono{ font-family:'IBM Plex Mono', ui-monospace, monospace; }
+  .display{ font-family:'Oswald', sans-serif; text-transform:uppercase; letter-spacing:0.5px; }
+  .brand-mark{ width:18px; height:18px; flex-shrink:0; filter:drop-shadow(0 0 4px #FFB45455); }
+  .brand-mark-lg{ width:52px; height:52px; margin-bottom:10px; filter:drop-shadow(0 0 10px #FFB45466); }
   #app{ max-width:480px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column; position:relative; }
 
   /* HUD strip */
@@ -40,7 +46,7 @@
   }
   .hud-top{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
   .hud-date{ font-size:11px; letter-spacing:2px; color:var(--dim); text-transform:uppercase; }
-  .hud-title{ font-size:15px; font-weight:700; letter-spacing:1px; color:var(--text); }
+  .hud-title{ font-family:'Oswald',sans-serif; text-transform:uppercase; font-size:16px; font-weight:600; letter-spacing:1.5px; color:var(--text); }
   .hud-title .dot{ color:var(--amber); }
   .readouts{ display:grid; grid-template-columns: repeat(4,1fr); gap:8px; }
   .readout{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:7px 6px; }
@@ -54,7 +60,7 @@
   section.active{ display:block; animation: fadeIn .25s ease; }
   @keyframes fadeIn{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
 
-  h2.section-title{ font-size:12px; letter-spacing:2px; color:var(--dim); text-transform:uppercase; margin: 4px 0 12px 0; display:flex; align-items:center; gap:8px; }
+  h2.section-title{ font-family:'Oswald',sans-serif; font-size:12.5px; font-weight:500; letter-spacing:2px; color:var(--dim); text-transform:uppercase; margin: 4px 0 12px 0; display:flex; align-items:center; gap:8px; }
   h2.section-title::after{ content:''; flex:1; height:1px; background:var(--line); }
 
   .card{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:12px; }
@@ -62,15 +68,15 @@
   label{ font-size:10px; letter-spacing:1.5px; color:var(--dim); text-transform:uppercase; display:block; margin-bottom:5px; }
   input, select{
     width:100%; background:#0A0F1C; border:1px solid var(--line); color:var(--text);
-    border-radius:7px; padding:10px 11px; font-size:15px; font-family:'JetBrains Mono',monospace;
+    border-radius:7px; padding:10px 11px; font-size:15px; font-family:'IBM Plex Mono',monospace;
     margin-bottom:12px; outline:none;
   }
   input:focus, select:focus{ border-color:var(--amber); }
-  select{ font-family:'Space Grotesk',sans-serif; }
+  select{ font-family:'Manrope',sans-serif; }
   .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .row3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
 
-  button{ font-family:'Space Grotesk',sans-serif; cursor:pointer; border:none; }
+  button{ font-family:'Manrope',sans-serif; cursor:pointer; border:none; }
   .btn-primary{
     width:100%; background:var(--amber); color:#1A1200; font-weight:700; font-size:14px;
     letter-spacing:0.5px; padding:12px; border-radius:8px; margin-top:2px;
@@ -86,7 +92,7 @@
   }
 
   .set-row{ display:grid; grid-template-columns: 20px 1fr 1fr 24px; gap:8px; align-items:center; margin-bottom:8px; }
-  .set-num{ font-size:11px; color:var(--dimmer); font-family:'JetBrains Mono',monospace; }
+  .set-num{ font-size:11px; color:var(--dimmer); font-family:'IBM Plex Mono',monospace; }
   .set-row input{ margin-bottom:0; padding:8px; font-size:14px; }
   .set-del{ color:var(--red); background:none; font-size:16px; text-align:center; }
 
@@ -99,7 +105,7 @@
   .log-entry:last-child{ border-bottom:none; }
   .log-entry-name{ font-size:13px; font-weight:500; }
   .log-entry-sub{ font-size:11px; color:var(--dim); margin-top:2px; }
-  .log-entry-val{ font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--cyan); text-align:right; }
+  .log-entry-val{ font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--cyan); text-align:right; }
   .log-entry-del{ background:none; color:var(--dimmer); font-size:14px; padding-left:10px; }
 
   .empty-state{ text-align:center; padding: 30px 10px; color:var(--dimmer); font-size:12px; }
@@ -126,7 +132,7 @@
   /* chart */
   .chart-wrap{ position:relative; }
   select.ex-select{ margin-bottom:14px; }
-  .pr-badge{ display:inline-block; background:#5FE3D022; color:var(--cyan); font-size:10px; padding:3px 8px; border-radius:20px; margin-left:8px; font-family:'JetBrains Mono',monospace; }
+  .pr-badge{ display:inline-block; background:#5FE3D022; color:var(--cyan); font-size:10px; padding:3px 8px; border-radius:20px; margin-left:8px; font-family:'IBM Plex Mono',monospace; }
 
   ::-webkit-scrollbar{ display:none; }
 
@@ -161,12 +167,12 @@
   .modal-handle{ width:36px; height:4px; background:var(--dimmer); border-radius:3px; margin:0 auto 14px auto; }
   .modal-canvas-wrap{ background:linear-gradient(180deg,#0D1424,#080C16); border:1px solid var(--line); border-radius:12px; height:220px; position:relative; overflow:hidden; margin-bottom:16px; }
   .modal-canvas-wrap canvas{ width:100%!important; height:100%!important; }
-  .modal-title{ font-size:19px; font-weight:700; margin-bottom:2px; }
+  .modal-title{ font-family:'Oswald',sans-serif; font-size:20px; font-weight:600; margin-bottom:2px; }
   .modal-sub{ font-size:11px; color:var(--dim); letter-spacing:1px; text-transform:uppercase; margin-bottom:16px; }
   .muscle-block{ margin-bottom:12px; }
   .muscle-label{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:6px; }
   .muscle-tags{ display:flex; flex-wrap:wrap; gap:6px; }
-  .muscle-tag{ font-size:12px; padding:5px 10px; border-radius:20px; font-family:'JetBrains Mono',monospace; }
+  .muscle-tag{ font-size:12px; padding:5px 10px; border-radius:20px; font-family:'IBM Plex Mono',monospace; }
   .muscle-tag.direct{ background:#FFB45422; color:var(--amber); border:1px solid #FFB45444; }
   .muscle-tag.indirect{ background:#5FE3D018; color:var(--cyan); border:1px solid #5FE3D033; }
   .modal-close{ position:absolute; top:14px; right:16px; background:none; color:var(--dim); font-size:20px; z-index:2; }
@@ -177,7 +183,7 @@
     position:fixed; inset:0; z-index:100; background: radial-gradient(circle at 50% 20%, #16203E, #0A0F1C 70%);
     display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center;
   }
-  .login-logo{ font-size:34px; font-weight:700; letter-spacing:4px; margin-bottom:6px; }
+  .login-logo{ font-family:'Oswald',sans-serif; font-size:38px; font-weight:700; letter-spacing:5px; margin-bottom:6px; }
   .login-logo .dot{ color:var(--amber); }
   .login-tag{ font-size:12px; color:var(--dim); letter-spacing:2px; text-transform:uppercase; margin-bottom:40px; }
   .google-btn{
@@ -201,25 +207,25 @@
     display:flex; align-items:center; justify-content:space-between; background:#0A0F1C;
     border:1px dashed var(--dimmer); border-radius:8px; padding:12px 14px; margin:10px 0 4px 0;
   }
-  .code-text{ font-family:'JetBrains Mono',monospace; font-size:18px; letter-spacing:3px; color:var(--amber); font-weight:700; }
+  .code-text{ font-family:'IBM Plex Mono',monospace; font-size:18px; letter-spacing:3px; color:var(--amber); font-weight:700; }
   .copy-btn{ background:var(--panel-raised); border:1px solid var(--line); color:var(--cyan); font-size:11px; padding:6px 10px; border-radius:6px; }
   .leader-row{ display:flex; align-items:center; gap:12px; padding:11px 4px; border-bottom:1px solid var(--line); }
   .leader-row:last-child{ border-bottom:none; }
-  .leader-rank{ font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--dimmer); width:18px; flex-shrink:0; }
+  .leader-rank{ font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--dimmer); width:18px; flex-shrink:0; }
   .leader-rank.top{ color:var(--amber); font-weight:700; }
   .leader-avatar{ width:32px; height:32px; border-radius:50%; background:var(--panel-raised); border:1px solid var(--line); object-fit:cover; flex-shrink:0; }
   .leader-info{ flex:1; min-width:0; }
   .leader-name{ font-size:13px; font-weight:600; }
   .leader-name.me::after{ content:' (you)'; color:var(--dim); font-weight:400; font-size:11px; }
   .leader-sub{ font-size:10px; color:var(--dim); }
-  .leader-val{ font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--cyan); }
+  .leader-val{ font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--cyan); }
   .leave-clan-btn{ background:none; color:var(--red); font-size:11px; letter-spacing:0.5px; margin-top:10px; }
 
   /* Rank / XP strip */
   .rank-strip{ display:flex; align-items:center; justify-content:space-between; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:8px 10px; margin-top:10px; gap:10px; }
   .rank-info{ flex:1; min-width:0; }
-  .rank-name{ font-size:12px; font-weight:700; color:var(--amber); letter-spacing:0.5px; }
-  .rank-xp{ font-size:10px; color:var(--dim); font-family:'JetBrains Mono',monospace; margin-top:2px; }
+  .rank-name{ font-family:'Oswald',sans-serif; font-size:12.5px; font-weight:600; color:var(--amber); letter-spacing:0.75px; text-transform:uppercase; }
+  .rank-xp{ font-size:10px; color:var(--dim); font-family:'IBM Plex Mono',monospace; margin-top:2px; }
   .rank-bar{ width:64px; height:5px; background:#0006; border-radius:3px; overflow:hidden; flex-shrink:0; }
   .rank-bar-fill{ height:100%; background:linear-gradient(90deg,var(--amber),var(--cyan)); border-radius:3px; transition:width .3s; }
   .xp-toast{
@@ -237,7 +243,7 @@
   /* Plan cards */
   .plan-card{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:12px; }
   .plan-card-head{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
-  .plan-card-name{ font-size:15px; font-weight:700; }
+  .plan-card-name{ font-family:'Oswald',sans-serif; font-size:16px; font-weight:600; }
   .plan-card-meta{ font-size:11px; color:var(--dim); margin-top:3px; }
   .plan-card-actions{ display:flex; gap:8px; margin-top:10px; }
   .day-badges{ display:flex; gap:5px; flex-wrap:wrap; margin-top:6px; }
@@ -250,7 +256,7 @@
   /* Today view */
   .today-plan-card{ background:linear-gradient(135deg, var(--panel), #172236); border:1px solid var(--amber); border-radius:12px; padding:16px; margin-bottom:14px; }
   .today-plan-tag{ font-size:10px; letter-spacing:1.5px; color:var(--amber); text-transform:uppercase; margin-bottom:4px; }
-  .today-plan-name{ font-size:18px; font-weight:700; margin-bottom:4px; }
+  .today-plan-name{ font-family:'Oswald',sans-serif; font-size:19px; font-weight:600; margin-bottom:4px; }
   .today-plan-sub{ font-size:12px; color:var(--dim); margin-bottom:12px; }
 
   /* Plan exercise row (editor) */
@@ -280,16 +286,87 @@
   .set-checkbox.checked{ background:var(--cyan); color:#062420; border-color:var(--cyan); }
   .session-progress{ font-size:11px; color:var(--dim); margin-bottom:14px; }
   .btn-finish{ background:var(--cyan); color:#062420; }
+
+  /* Auth method switcher */
+  .auth-tabs{ display:flex; gap:6px; background:var(--panel); border:1px solid var(--line); border-radius:9px; padding:4px; margin-bottom:22px; width:100%; max-width:280px; }
+  .auth-tab{ flex:1; background:none; color:var(--dim); font-size:11px; font-weight:600; letter-spacing:0.5px; padding:8px 4px; border-radius:6px; }
+  .auth-tab.active{ background:var(--amber); color:#1A1200; }
+  .auth-panel input{ text-align:left; }
+
+  /* Theme picker */
+  .theme-row{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px; }
+  .theme-swatch{ display:flex; align-items:center; gap:7px; background:var(--panel-raised); border:1px solid var(--line); color:var(--dim); font-size:11.5px; font-weight:600; padding:8px 13px; border-radius:20px; }
+  .theme-swatch.active{ border-color:var(--amber); color:var(--text); }
+  .theme-dot{ width:14px; height:14px; border-radius:50%; display:inline-block; flex-shrink:0; }
+
+  /* Profile modal */
+  .profile-head{ display:flex; align-items:center; gap:12px; margin-bottom:20px; }
+  .profile-avatar-lg{ width:48px; height:48px; border-radius:50%; background:var(--panel-raised); border:1px solid var(--line); object-fit:cover; }
+  .profile-name{ font-family:'Oswald',sans-serif; font-weight:600; font-size:16px; }
+  .profile-email{ font-size:11px; color:var(--dim); margin-top:2px; }
+  .danger-btn{ width:100%; background:transparent; border:1px solid var(--red); color:var(--red); font-weight:700; font-size:13px; padding:11px; border-radius:8px; }
+
+  /* Session set remove */
+  .session-set-row{ grid-template-columns: 22px 26px 1fr 1fr 22px; }
+  .session-set-del{ color:var(--red); background:none; font-size:15px; text-align:center; }
+
+  /* Tournament */
+  .tourney-card{ background:var(--panel); border:1px solid var(--amber); border-radius:10px; padding:14px; margin-bottom:14px; }
+  .tourney-round-label{ font-size:11px; letter-spacing:1.5px; color:var(--amber); text-transform:uppercase; margin:14px 0 8px 0; font-weight:600; }
+  .bracket-match{ display:flex; align-items:center; justify-content:space-between; background:var(--panel-raised); border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin-bottom:8px; }
+  .bracket-player{ display:flex; align-items:center; gap:8px; font-size:12.5px; }
+  .bracket-player.winner{ color:var(--cyan); font-weight:700; }
+  .bracket-player.loser{ color:var(--dimmer); text-decoration:line-through; }
+  .bracket-vs{ font-size:10px; color:var(--dimmer); font-family:'IBM Plex Mono',monospace; }
+  .bracket-vol{ font-size:10px; color:var(--dim); font-family:'IBM Plex Mono',monospace; margin-left:6px; }
+  .duration-row{ display:flex; gap:8px; margin-bottom:12px; }
+  .duration-btn{ flex:1; background:var(--panel-raised); border:1px solid var(--line); color:var(--dim); font-size:12px; font-weight:600; padding:10px 0; border-radius:8px; }
+  .duration-btn.on{ background:var(--amber); color:#1A1200; border-color:var(--amber); }
 </style>
 </head>
 <body>
 <div id="login-screen">
-  <div class="login-logo">FOR<span class="dot">●</span>GE</div>
+  <svg class="brand-mark brand-mark-lg" viewBox="0 0 48 48" fill="none">
+    <path d="M24 3 L9 27 H21 L16 45 L40 18 H26 L24 3Z" fill="url(#sparkGrad)"/>
+    <defs><linearGradient id="sparkGrad" x1="9" y1="3" x2="40" y2="45" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFB454"/><stop offset="1" stop-color="#5FE3D0"/>
+    </linearGradient></defs>
+  </svg>
+  <div class="login-logo">FORGE</div>
   <div class="login-tag">Train. Track. Together.</div>
-  <button class="google-btn" onclick="signIn()">
-    <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.81.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.97 10.72A5.4 5.4 0 0 1 3.68 9c0-.6.1-1.18.29-1.72V4.95H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.05l3.01-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.51.46 3.44 1.35l2.59-2.59C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/></svg>
-    Sign in with Google
-  </button>
+
+  <div class="auth-tabs">
+    <button class="auth-tab active" data-m="google" onclick="setAuthMethod('google')">Google</button>
+    <button class="auth-tab" data-m="email" onclick="setAuthMethod('email')">Email</button>
+    <button class="auth-tab" data-m="phone" onclick="setAuthMethod('phone')">Phone</button>
+  </div>
+
+  <div id="auth-google" class="auth-panel">
+    <button class="google-btn" onclick="signIn()">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.81.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.97 10.72A5.4 5.4 0 0 1 3.68 9c0-.6.1-1.18.29-1.72V4.95H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.05l3.01-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.51.46 3.44 1.35l2.59-2.59C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/></svg>
+      Sign in with Google
+    </button>
+  </div>
+
+  <div id="auth-email" class="auth-panel" style="display:none; width:100%; max-width:280px;">
+    <input id="email-input" type="email" placeholder="Email" autocomplete="email">
+    <input id="email-pass-input" type="password" placeholder="Password" autocomplete="current-password">
+    <button class="btn-primary" onclick="emailSignIn()">Sign In</button>
+    <button class="btn-ghost" style="width:100%; margin-top:8px;" onclick="emailSignUp()">Create Account</button>
+  </div>
+
+  <div id="auth-phone" class="auth-panel" style="display:none; width:100%; max-width:280px;">
+    <div id="phone-step-number">
+      <input id="phone-input" type="tel" placeholder="+1 555 555 5555" autocomplete="tel">
+      <button class="btn-primary" onclick="sendPhoneCode()">Send Code</button>
+      <div id="recaptcha-container"></div>
+    </div>
+    <div id="phone-step-code" style="display:none;">
+      <input id="phone-code-input" type="text" inputmode="numeric" placeholder="6-digit code">
+      <button class="btn-primary" onclick="confirmPhoneCode()">Verify & Sign In</button>
+    </div>
+  </div>
+
   <div class="login-loading" id="login-status"></div>
 </div>
 
@@ -297,14 +374,17 @@
 
   <div class="hud">
     <div class="user-strip">
-      <div class="user-info">
+      <div class="user-info" onclick="openProfileModal()" style="cursor:pointer;">
         <img class="user-avatar" id="user-avatar" src="" alt="">
         <span class="user-name" id="user-name-label">--</span>
+        <span style="color:var(--dimmer); font-size:10px;">⚙</span>
       </div>
-      <button class="signout-btn" onclick="signOutUser()">Sign out</button>
     </div>
     <div class="hud-top">
-      <div class="hud-title">FOR<span class="dot">●</span>GE</div>
+      <div class="hud-title" style="display:flex; align-items:center; gap:7px;">
+        <svg class="brand-mark" viewBox="0 0 48 48" fill="none"><path d="M24 3 L9 27 H21 L16 45 L40 18 H26 L24 3Z" fill="url(#sparkGradSm)"/><defs><linearGradient id="sparkGradSm" x1="9" y1="3" x2="40" y2="45" gradientUnits="userSpaceOnUse"><stop stop-color="#FFB454"/><stop offset="1" stop-color="#5FE3D0"/></linearGradient></defs></svg>
+        FORGE
+      </div>
       <div class="hud-date mono" id="hud-date">--</div>
     </div>
     <div class="readouts">
@@ -367,9 +447,9 @@
         <h2 class="section-title">Your Workouts</h2>
         <div id="plan-list"></div>
         <div class="card">
-          <label>New Workout Name</label>
+          <label>Workout Name</label>
           <input id="new-plan-name" placeholder="e.g. Push Day A">
-          <label>Assigned Days</label>
+          <label>Scheduled Days</label>
           <div class="day-toggle-row" id="new-plan-days"></div>
           <button class="btn-primary" onclick="createPlan()">+ Create Workout</button>
         </div>
@@ -379,9 +459,9 @@
       <div id="wv-plan-detail" class="workout-view" style="display:none;">
         <button class="btn-ghost" onclick="switchWorkoutView('plans')" style="margin-bottom:12px;">← Back to Workouts</button>
         <div class="card">
-          <label>Workout Name</label>
+          <label>Name</label>
           <input id="plan-detail-name" onchange="updatePlanName(this.value)">
-          <label>Assigned Days</label>
+          <label>Scheduled Days</label>
           <div class="day-toggle-row" id="plan-detail-days"></div>
         </div>
         <div class="plan-editing-banner">
@@ -481,10 +561,10 @@
     <!-- CLAN TAB -->
     <section id="tab-clan">
       <div id="clan-no-clan">
-        <h2 class="section-title">Join Forces</h2>
+        <h2 class="section-title">Team Up</h2>
         <div class="card clan-hero">
           <div class="icon">⬡</div>
-          <div style="font-size:13px; color:var(--dim); margin-bottom:4px;">You're not in a clan yet</div>
+          <div style="font-size:13px; color:var(--dim); margin-bottom:4px;">You're not on a team yet — join one and start competing</div>
         </div>
         <div class="card">
           <label>Create a Clan</label>
@@ -509,6 +589,7 @@
         </div>
         <h2 class="section-title">Weekly Volume Leaderboard</h2>
         <div class="card" id="clan-leaderboard"><div class="empty-state">Loading...</div></div>
+        <div id="tournament-section"></div>
         <button class="leave-clan-btn" onclick="leaveClan()">Leave Clan</button>
       </div>
     </section>
@@ -552,6 +633,38 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="profile-modal-overlay" onclick="if(event.target===this) closeProfileModal()">
+    <div class="modal-sheet">
+      <button class="modal-close" onclick="closeProfileModal()">×</button>
+      <div class="modal-handle"></div>
+      <div class="profile-head">
+        <img class="profile-avatar-lg" id="profile-avatar" src="" alt="">
+        <div>
+          <div class="profile-name" id="profile-name">--</div>
+          <div class="profile-email" id="profile-email">--</div>
+        </div>
+      </div>
+      <h2 class="section-title">Appearance</h2>
+      <div class="theme-row" id="theme-picker"></div>
+      <h2 class="section-title">Help</h2>
+      <button class="btn-ghost" style="width:100%; margin-bottom:22px;" onclick="closeProfileModal(); startTutorial();">Replay Tutorial</button>
+      <h2 class="section-title">Danger Zone</h2>
+      <button class="danger-btn" onclick="confirmResetProgress()">Reset All Progress</button>
+      <button class="btn-ghost" style="width:100%; margin-top:10px; color:var(--red);" onclick="signOutUser()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="tutorial-overlay" style="align-items:center;">
+    <div class="modal-sheet" style="border-radius:18px; max-width:340px; text-align:center;">
+      <div style="font-size:36px; margin-bottom:10px;" id="tutorial-icon">🔥</div>
+      <div class="modal-title" id="tutorial-title" style="text-align:center;">Welcome</div>
+      <div style="font-size:13px; color:var(--dim); line-height:1.55; margin:10px 0 18px 0;" id="tutorial-body"></div>
+      <div style="font-size:10px; color:var(--dimmer); margin-bottom:14px;" class="mono" id="tutorial-progress">1 / 6</div>
+      <button class="btn-primary" id="tutorial-next-btn" onclick="tutorialNext()">Next</button>
+      <button class="btn-ghost" id="tutorial-skip-btn" style="width:100%; margin-top:8px;" onclick="closeTutorial()">Skip tour</button>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -592,13 +705,79 @@ function showAuthError(err){
   const el = document.getElementById('login-status');
   const messages = {
     'auth/unauthorized-domain': 'This domain isn\'t authorized for sign-in yet — add it under Firebase Console → Authentication → Settings → Authorized domains.',
-    'auth/operation-not-allowed': 'Google sign-in isn\'t enabled for this Firebase project yet — turn it on under Authentication → Sign-in method.',
+    'auth/operation-not-allowed': 'This sign-in method isn\'t enabled for this project yet — turn it on under Authentication → Sign-in method.',
     'auth/network-request-failed': 'Network error — check your connection and try again.',
+    'auth/email-already-in-use': 'An account already exists with that email — try signing in instead.',
+    'auth/invalid-email': 'That email address doesn\'t look right.',
+    'auth/weak-password': 'Password should be at least 6 characters.',
+    'auth/wrong-password': 'Incorrect password.',
+    'auth/user-not-found': 'No account found with that email — try creating one.',
+    'auth/invalid-phone-number': 'That phone number doesn\'t look right — include the country code, e.g. +1 555 555 5555.',
+    'auth/invalid-verification-code': 'That code didn\'t match — check it and try again.',
+    'auth/code-expired': 'That code expired — request a new one.',
+    'auth/too-many-requests': 'Too many attempts — wait a bit and try again.',
+    'auth/missing-phone-number': 'Enter a phone number first.',
   };
   el.textContent = messages[err.code] || ('Sign-in failed (' + (err.code || 'unknown') + ') — try again.');
 }
 function signOutUser(){
   auth.signOut();
+}
+
+function setAuthMethod(m){
+  ['google','email','phone'].forEach(k=>{
+    document.getElementById('auth-'+k).style.display = k===m ? 'block' : 'none';
+    document.querySelector('.auth-tab[data-m="'+k+'"]').classList.toggle('active', k===m);
+  });
+  document.getElementById('login-status').textContent = '';
+}
+
+async function emailSignUp(){
+  const email = document.getElementById('email-input').value.trim();
+  const pass = document.getElementById('email-pass-input').value;
+  if(!email || !pass){ document.getElementById('login-status').textContent = 'Enter an email and password.'; return; }
+  document.getElementById('login-status').textContent = 'Creating account...';
+  try{ await auth.createUserWithEmailAndPassword(email, pass); }
+  catch(err){ console.error('emailSignUp error', err.code, err.message); showAuthError(err); }
+}
+async function emailSignIn(){
+  const email = document.getElementById('email-input').value.trim();
+  const pass = document.getElementById('email-pass-input').value;
+  if(!email || !pass){ document.getElementById('login-status').textContent = 'Enter an email and password.'; return; }
+  document.getElementById('login-status').textContent = 'Signing in...';
+  try{ await auth.signInWithEmailAndPassword(email, pass); }
+  catch(err){ console.error('emailSignIn error', err.code, err.message); showAuthError(err); }
+}
+
+let phoneConfirmationResult = null;
+function ensureRecaptcha(){
+  if(!window.recaptchaVerifier){
+    window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { size:'invisible' });
+  }
+  return window.recaptchaVerifier;
+}
+async function sendPhoneCode(){
+  const phone = document.getElementById('phone-input').value.trim();
+  if(!phone){ document.getElementById('login-status').textContent = 'Enter a phone number, including country code.'; return; }
+  document.getElementById('login-status').textContent = 'Sending code...';
+  try{
+    const verifier = ensureRecaptcha();
+    phoneConfirmationResult = await auth.signInWithPhoneNumber(phone, verifier);
+    document.getElementById('phone-step-number').style.display = 'none';
+    document.getElementById('phone-step-code').style.display = 'block';
+    document.getElementById('login-status').textContent = 'Code sent — check your texts.';
+  }catch(err){
+    console.error('sendPhoneCode error', err.code, err.message);
+    showAuthError(err);
+    if(window.recaptchaVerifier){ window.recaptchaVerifier.render().then(id=>grecaptcha && grecaptcha.reset(id)).catch(()=>{}); }
+  }
+}
+async function confirmPhoneCode(){
+  const code = document.getElementById('phone-code-input').value.trim();
+  if(!code || !phoneConfirmationResult){ document.getElementById('login-status').textContent = 'Enter the code you received.'; return; }
+  document.getElementById('login-status').textContent = 'Verifying...';
+  try{ await phoneConfirmationResult.confirm(code); }
+  catch(err){ console.error('confirmPhoneCode error', err.code, err.message); showAuthError(err); }
 }
 
 // Complete a redirect-based sign-in if we just came back from Google
@@ -612,8 +791,8 @@ auth.onAuthStateChanged(async (user) => {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
     document.getElementById('user-avatar').src = user.photoURL || '';
-    document.getElementById('user-name-label').textContent = (user.displayName || user.email || '').split(' ')[0];
-    await ensureUserDoc();
+    document.getElementById('user-name-label').textContent = (user.displayName || (user.email ? user.email.split('@')[0] : user.phoneNumber) || 'Athlete').split(' ')[0];
+    const isNewUser = await ensureUserDoc();
     await loadState();
   } else {
     currentUser = null;
@@ -628,17 +807,46 @@ async function ensureUserDoc(){
     const snap = await ref.get();
     if(!snap.exists){
       await ref.set({
-        displayName: currentUser.displayName || 'Athlete',
+        displayName: currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : 'Athlete'),
         photoURL: currentUser.photoURL || '',
         email: currentUser.email || '',
         clanId: null,
         targets: { calories: 2400, protein: 150, fat: 70, carb: 300 },
         plans: [],
         xp: 0,
+        theme: 'forge',
+        onboarded: false,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
+      sendWelcomeEmail(); // fire-and-forget — needs the Trigger Email extension, see setup notes
+      return true;
     }
-  }catch(e){ console.error('ensureUserDoc error', e); }
+    return false;
+  }catch(e){ console.error('ensureUserDoc error', e); return false; }
+}
+
+// Writes a doc to the `mail` collection, which the Firebase "Trigger Email from Firestore"
+// extension picks up and actually sends. Without that extension installed, this doc just
+// sits there unsent — it does not fail loudly, so check the `mail` collection in Firestore
+// if emails aren't arriving.
+async function sendWelcomeEmail(){
+  if(!currentUser.email) return; // phone-auth accounts have no email to send to
+  const first = (currentUser.displayName || currentUser.email.split('@')[0]).split(' ')[0];
+  try{
+    await db.collection('mail').add({
+      to: [currentUser.email],
+      message: {
+        subject: 'Welcome to FORGE 🔥',
+        text: 'Hey '+first+',\n\nWelcome to FORGE — your training just got a command center. Build a workout plan, log your first session, and start climbing the ranks.\n\nSee you on the leaderboard.\n— FORGE',
+        html: '<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#0A0F1C;color:#E7ECF5;border-radius:12px;">'
+          + '<h2 style="color:#FFB454;margin-top:0;">Welcome to FORGE, '+first+' 🔥</h2>'
+          + '<p style="line-height:1.6;">Your training just got a command center. Build a workout plan, log your first session, and start climbing the ranks.</p>'
+          + '<p style="line-height:1.6;">See you on the leaderboard.</p>'
+          + '<p style="color:#7C8AA8;">— FORGE</p>'
+          + '</div>'
+      }
+    });
+  }catch(e){ console.error('sendWelcomeEmail error', e); }
 }
 
 // ---------------- STATE ----------------
@@ -677,9 +885,11 @@ let newPlanDays = loadDraft('forge_draft_newplandays', []);
 
 // ---------------- RANK / XP SYSTEM ----------------
 const RANKS = [
-  {name:'Recruit', min:0}, {name:'Grinder', min:150}, {name:'Lifter', min:400},
-  {name:'Contender', min:800}, {name:'Beast', min:1500}, {name:'Warrior', min:2800},
-  {name:'Titan', min:5000}, {name:'Legend', min:9000}, {name:'Mythic', min:15000},
+  {name:'Recruit', min:0}, {name:'Apprentice', min:100}, {name:'Grinder', min:250},
+  {name:'Lifter', min:500}, {name:'Journeyman', min:900}, {name:'Contender', min:1400},
+  {name:'Beast', min:2100}, {name:'Warlord', min:3000}, {name:'Warrior', min:4200},
+  {name:'Gladiator', min:5800}, {name:'Titan', min:8000}, {name:'Champion', min:11000},
+  {name:'Legend', min:15000}, {name:'Mythic', min:20000}, {name:'Immortal', min:27000},
 ];
 function getRankInfo(xp){
   let current = RANKS[0], next = RANKS[1] || null;
@@ -729,6 +939,105 @@ async function savePlansToFirestore(){
   catch(e){ console.error('savePlans error', e); }
 }
 
+// ---------------- THEMES ----------------
+const THEMES = [
+  {id:'forge', name:'Forge', c1:'#FFB454', c2:'#5FE3D0'},
+  {id:'steel', name:'Steel', c1:'#7FB8FF', c2:'#9AE6C4'},
+  {id:'ember', name:'Ember', c1:'#FF6B4A', c2:'#FFD166'},
+  {id:'midnight', name:'Midnight', c1:'#B388FF', c2:'#64D9E8'},
+];
+let currentTheme = loadDraft('forge_theme', 'forge');
+document.body.dataset.theme = currentTheme;
+function renderThemePicker(){
+  const c = document.getElementById('theme-picker');
+  if(!c) return;
+  c.innerHTML = THEMES.map(t=>`
+    <button class="theme-swatch ${currentTheme===t.id?'active':''}" onclick="setTheme('${t.id}')">
+      <span class="theme-dot" style="background:linear-gradient(135deg,${t.c1},${t.c2})"></span>${t.name}
+    </button>
+  `).join('');
+}
+function setTheme(id, skipSave){
+  currentTheme = id;
+  document.body.dataset.theme = id;
+  renderThemePicker();
+  if(skipSave) return;
+  saveDraft('forge_theme', id);
+  if(currentUser){ db.collection('users').doc(currentUser.uid).update({theme:id}).catch(e=>console.error('theme save error', e)); }
+}
+
+// ---------------- PROFILE MODAL ----------------
+function openProfileModal(){
+  document.getElementById('profile-avatar').src = currentUser.photoURL || '';
+  document.getElementById('profile-name').textContent = currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : (currentUser.phoneNumber || 'Athlete'));
+  document.getElementById('profile-email').textContent = currentUser.email || currentUser.phoneNumber || '';
+  renderThemePicker();
+  document.getElementById('profile-modal-overlay').classList.add('open');
+}
+function closeProfileModal(){
+  document.getElementById('profile-modal-overlay').classList.remove('open');
+}
+async function confirmResetProgress(){
+  if(!confirm('This permanently deletes all your workouts, food logs, workout plans, and XP. This can\'t be undone. Continue?')) return;
+  try{
+    const deletes = [];
+    const wSnap = await db.collection('users').doc(currentUser.uid).collection('workouts').get();
+    wSnap.forEach(d=>deletes.push(d.ref.delete()));
+    const fSnap = await db.collection('users').doc(currentUser.uid).collection('food').get();
+    fSnap.forEach(d=>deletes.push(d.ref.delete()));
+    await Promise.all(deletes);
+    await db.collection('users').doc(currentUser.uid).update({ plans: [], xp: 0 });
+  }catch(e){ console.error('reset progress error', e); alert('Something went wrong resetting your progress — try again.'); return; }
+  STATE.workouts = []; STATE.food = []; STATE.plans = []; STATE.xp = 0;
+  activeSession = null; currentExercises = [];
+  localStorage.removeItem('forge_draft_session');
+  localStorage.removeItem('forge_draft_builder');
+  persistLocalState();
+  closeProfileModal();
+  renderAll();
+  switchWorkoutView('today');
+}
+
+// ---------------- TUTORIAL ----------------
+const TUTORIAL_STEPS = [
+  { icon:'🔥', title:'Welcome to FORGE', body:'Your training command center — plan workouts, track food, and level up your rank. Here\'s a quick tour.' },
+  { icon:'▲', title:'Workout', body:'Build workout plans, schedule them to specific days, then check off sets as you train. Every set and every workout earns you XP.' },
+  { icon:'◈', title:'Exercises', body:'Browse 100+ exercises with muscle breakdowns and 3D form previews. Tap + to drop one straight into your session or workout plan.' },
+  { icon:'◆', title:'Food', body:'Log meals and track calories, protein, fat, and carbs against your daily targets shown up top.' },
+  { icon:'▮', title:'Progress', body:'Watch your strength climb over time, and set your daily nutrition targets.' },
+  { icon:'⬡', title:'Clan', body:'Team up with friends, compare weekly volume, and run tournaments to see who\'s grinding hardest.' },
+];
+let tutorialStep = 0;
+function startTutorial(){
+  tutorialStep = 0;
+  renderTutorialStep();
+  document.getElementById('tutorial-overlay').classList.add('open');
+}
+function renderTutorialStep(){
+  const s = TUTORIAL_STEPS[tutorialStep];
+  let body = s.body;
+  if(tutorialStep===0 && currentUser){
+    const first = (currentUser.displayName || '').split(' ')[0];
+    if(first) body = 'Welcome, '+first+'! ' + body;
+  }
+  document.getElementById('tutorial-icon').textContent = s.icon;
+  document.getElementById('tutorial-title').textContent = s.title;
+  document.getElementById('tutorial-body').textContent = body;
+  document.getElementById('tutorial-progress').textContent = (tutorialStep+1)+' / '+TUTORIAL_STEPS.length;
+  document.getElementById('tutorial-next-btn').textContent = tutorialStep===TUTORIAL_STEPS.length-1 ? "Let's go" : 'Next';
+  document.getElementById('tutorial-skip-btn').style.display = tutorialStep===TUTORIAL_STEPS.length-1 ? 'none' : 'inline-block';
+}
+function tutorialNext(){
+  if(tutorialStep < TUTORIAL_STEPS.length-1){ tutorialStep++; renderTutorialStep(); }
+  else closeTutorial();
+}
+async function closeTutorial(){
+  document.getElementById('tutorial-overlay').classList.remove('open');
+  if(currentUser){
+    try{ await db.collection('users').doc(currentUser.uid).update({onboarded:true}); }catch(e){ console.error('onboarded save error', e); }
+  }
+}
+
 function todayStr(){
   const d = new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -766,6 +1075,8 @@ async function loadState(){
     STATE.clanId = udata.clanId || null;
     STATE.plans = udata.plans || [];
     STATE.xp = udata.xp || 0;
+    if(udata.theme) setTheme(udata.theme, true);
+    if(udata.onboarded===false) startTutorial();
   }catch(e){ console.error('loadState user doc error', e); }
 
   try{
@@ -1043,6 +1354,7 @@ function renderActiveSession(){
           <button class="set-checkbox ${s.done?'checked':''}" onclick="toggleSetDone(${exIdx},${setIdx})">${s.done?'✓':''}</button>
           <input type="number" inputmode="decimal" placeholder="lbs" value="${s.weight}" onchange="updateSessionSet(${exIdx},${setIdx},'weight',this.value)">
           <input type="number" inputmode="numeric" placeholder="reps" value="${s.reps}" onchange="updateSessionSet(${exIdx},${setIdx},'reps',this.value)">
+          <button class="session-set-del" onclick="removeSessionSet(${exIdx},${setIdx})">×</button>
         </div>
       `).join('')}
       <button class="btn-add-set" onclick="addSessionSet(${exIdx})">+ Add Set</button>
@@ -1059,6 +1371,19 @@ function updateSessionSet(exIdx, setIdx, field, val){
 }
 function addSessionSet(exIdx){
   activeSession.exercises[exIdx].sets.push({weight:'', reps:'', done:false});
+  saveDraft('forge_draft_session', activeSession);
+  renderActiveSession();
+}
+function removeSessionSet(exIdx, setIdx){
+  const ex = activeSession.exercises[exIdx];
+  const wasComplete = isExComplete(ex) && ex.bonusAwarded;
+  if(ex.sets[setIdx].done){ activeSession.xpEarned = Math.max(0, activeSession.xpEarned-5); awardXp(-5); }
+  ex.sets.splice(setIdx,1);
+  if(wasComplete && !isExComplete(ex)){
+    ex.bonusAwarded = false;
+    activeSession.xpEarned = Math.max(0, activeSession.xpEarned-20);
+    awardXp(-20);
+  }
   saveDraft('forge_draft_session', activeSession);
   renderActiveSession();
 }
@@ -1359,7 +1684,7 @@ function renderChart(){
       <path d="${path}" fill="none" stroke="#5FE3D0" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
       ${coords.map(c=>`<circle cx="${c.x}" cy="${c.y}" r="3.5" fill="#0A0F1C" stroke="#5FE3D0" stroke-width="2"/>`).join('')}
     </svg>
-    <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--dim); font-family:'JetBrains Mono',monospace; margin-top:4px;">
+    <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--dim); font-family:'IBM Plex Mono',monospace; margin-top:4px;">
       <span>${fmtDateHuman(points[0].date)}</span>
       <span>${fmtDateHuman(points[points.length-1].date)}</span>
     </div>
@@ -1415,7 +1740,7 @@ async function createClan(){
     document.getElementById('clan-name-input').value = '';
     showInClanView();
     loadClan();
-  }catch(e){ console.error('createClan error', e); }
+  }catch(e){ console.error('createClan error', e); alert('Couldn\'t create the clan — ' + (e.message || 'check your connection and try again.')); }
 }
 
 async function joinClan(){
@@ -1434,7 +1759,7 @@ async function joinClan(){
     document.getElementById('clan-code-input').value = '';
     showInClanView();
     loadClan();
-  }catch(e){ console.error('joinClan error', e); }
+  }catch(e){ console.error('joinClan error', e); alert('Couldn\'t join that clan — ' + (e.message || 'check the code and try again.')); }
 }
 
 async function leaveClan(){
@@ -1447,7 +1772,7 @@ async function leaveClan(){
     STATE.clanId = null;
     persistLocalState();
     showNoClanView();
-  }catch(e){ console.error('leaveClan error', e); }
+  }catch(e){ console.error('leaveClan error', e); alert('Couldn\'t leave the clan — try again.'); }
 }
 
 function copyClanCode(btn){
@@ -1467,6 +1792,218 @@ function copyClanCode(btn){
   } else {
     flash();
   }
+}
+
+// ---------------- TOURNAMENT ----------------
+function buildTournamentBracket(playerList, durationDays){
+  let bracketSize = 1; while(bracketSize < playerList.length) bracketSize *= 2;
+  if(bracketSize < 2) bracketSize = 2;
+  const numRounds = Math.log2(bracketSize);
+  const roundLengthDays = Math.max(1, Math.round(durationDays / numRounds));
+  const seeded = playerList.slice();
+  for(let i=seeded.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const tmp=seeded[i]; seeded[i]=seeded[j]; seeded[j]=tmp; }
+  while(seeded.length < bracketSize) seeded.push(null);
+  const now = Date.now();
+  const rounds = [];
+  for(let r=0;r<numRounds;r++){
+    const count = bracketSize / Math.pow(2, r+1);
+    const start = now + r*roundLengthDays*86400000;
+    const end = now + (r+1)*roundLengthDays*86400000;
+    const matches = [];
+    for(let i=0;i<count;i++){
+      matches.push({ p1:null,p2:null,p1Name:null,p2Name:null,p1vol:0,p2vol:0,winner:null,resolved:false,
+        p1XpAmount:0,p2XpAmount:0,p1XpClaimed:true,p2XpClaimed:true, roundStart:start, roundEnd:end });
+    }
+    rounds.push(matches);
+  }
+  for(let i=0;i<bracketSize;i+=2){
+    const p1 = seeded[i], p2 = seeded[i+1];
+    const m = rounds[0][i/2];
+    if(p1){ m.p1 = p1.uid; m.p1Name = p1.name; }
+    if(p2){ m.p2 = p2.uid; m.p2Name = p2.name; }
+    if(!m.p1 && m.p2){ m.winner = m.p2; m.resolved = true; }
+    else if(m.p1 && !m.p2){ m.winner = m.p1; m.resolved = true; }
+  }
+  // propagate any immediate byes one level
+  for(let r=0;r<numRounds-1;r++){
+    rounds[r].forEach((m,i)=>{
+      if(m.resolved && m.winner){
+        const nm = rounds[r+1][Math.floor(i/2)];
+        const name = m.winner===m.p1 ? m.p1Name : m.p2Name;
+        if(i%2===0){ nm.p1 = m.winner; nm.p1Name = name; } else { nm.p2 = m.winner; nm.p2Name = name; }
+      }
+    });
+  }
+  return { rounds, numRounds, roundLengthDays, bracketSize };
+}
+
+let tourneyDuration = 7;
+function setTourneyDuration(d){
+  tourneyDuration = d;
+  document.querySelectorAll('.duration-btn').forEach(b=>b.classList.toggle('on', parseInt(b.dataset.d)===d));
+}
+
+async function startTournament(days){
+  if(!STATE.clanId) return;
+  try{
+    const clanSnap = await db.collection('clans').doc(STATE.clanId).get();
+    const clan = clanSnap.data();
+    const memberUids = Object.keys(clan.members||{});
+    if(memberUids.length < 2){ alert('You need at least 2 clan members to start a tournament.'); return; }
+    const playerList = memberUids.map(uid=>({uid, name: clan.members[uid].displayName || 'Athlete', photo: clan.members[uid].photoURL || ''}));
+    const built = buildTournamentBracket(playerList, days);
+    const tournament = {
+      id: genId(), durationDays: days, startedAt: Date.now(), numRounds: built.numRounds, roundLengthDays: built.roundLengthDays,
+      players: playerList, rounds: built.rounds, currentRound: 0, status: 'active', champion: null,
+      championBonusAmount: 300, championBonusClaimed: true
+    };
+    await db.collection('clans').doc(STATE.clanId).update({ tournament });
+    loadClan();
+  }catch(e){ console.error('startTournament error', e); alert('Couldn\'t start the tournament — try again.'); }
+}
+
+async function computeVolumeInWindow(uid, startMs, endMs){
+  const startStr = new Date(startMs).toISOString().slice(0,10);
+  const endStr = new Date(endMs).toISOString().slice(0,10);
+  try{
+    const wSnap = await db.collection('users').doc(uid).collection('workouts').where('date','>=',startStr).where('date','<',endStr).get();
+    let volume = 0;
+    wSnap.docs.forEach(d=>{
+      const w = d.data();
+      (w.exercises||[]).forEach(ex=>(ex.sets||[]).forEach(s=>{ volume += (parseFloat(s.weight)||0) * (parseFloat(s.reps)||0); }));
+    });
+    return volume;
+  }catch(e){ console.error('computeVolumeInWindow error', e); return 0; }
+}
+
+// Lazily advances the bracket whenever any clan member's client notices a round's window has closed.
+// No backend/cron is involved — whichever member opens the Clan tab first after a round ends resolves it.
+async function advanceTournamentIfNeeded(clan){
+  const t = clan.tournament;
+  if(!t || t.status!=='active') return false;
+  const round = t.rounds[t.currentRound];
+  if(!round || round.length===0) return false;
+  if(Date.now() < round[0].roundEnd) return false;
+  let changed = false;
+  for(const m of round){
+    if(m.resolved) continue;
+    if(!m.p1 && !m.p2) continue;
+    if(m.p1 && !m.p2){ m.winner = m.p1; m.resolved = true; changed = true; continue; }
+    if(!m.p1 && m.p2){ m.winner = m.p2; m.resolved = true; changed = true; continue; }
+    const [v1, v2] = await Promise.all([
+      computeVolumeInWindow(m.p1, m.roundStart, m.roundEnd),
+      computeVolumeInWindow(m.p2, m.roundStart, m.roundEnd)
+    ]);
+    m.p1vol = v1; m.p2vol = v2;
+    m.winner = v1 >= v2 ? m.p1 : m.p2;
+    m.resolved = true;
+    const winnerXp = 80 + t.currentRound*40;
+    const loserXp = Math.max(10, 60 - t.currentRound*15); // losers still earn XP, less each round
+    if(m.winner===m.p1){ m.p1XpAmount = winnerXp; m.p2XpAmount = loserXp; } else { m.p2XpAmount = winnerXp; m.p1XpAmount = loserXp; }
+    m.p1XpClaimed = false; m.p2XpClaimed = false;
+    changed = true;
+  }
+  if(t.currentRound+1 < t.rounds.length){
+    const next = t.rounds[t.currentRound+1];
+    round.forEach((m,i)=>{
+      if(m.resolved && m.winner){
+        const nm = next[Math.floor(i/2)];
+        const name = m.winner===m.p1 ? m.p1Name : m.p2Name;
+        if(i%2===0 && !nm.p1){ nm.p1 = m.winner; nm.p1Name = name; changed = true; }
+        else if(i%2===1 && !nm.p2){ nm.p2 = m.winner; nm.p2Name = name; changed = true; }
+      }
+    });
+    t.currentRound += 1;
+    changed = true;
+  } else if(round[0] && round[0].resolved){
+    t.status = 'complete';
+    t.champion = round[0].winner;
+    t.championBonusClaimed = false;
+    changed = true;
+  }
+  return changed;
+}
+
+// Each client only ever writes its OWN xp field — this scans for XP addressed to
+// the current user that hasn't been claimed yet and applies it locally.
+function claimTournamentXp(clan){
+  const t = clan.tournament;
+  if(!t || !currentUser) return false;
+  let total = 0, changed = false;
+  t.rounds.forEach(round=>{
+    round.forEach(m=>{
+      if(!m.resolved) return;
+      if(m.p1===currentUser.uid && !m.p1XpClaimed && m.p1XpAmount){ total += m.p1XpAmount; m.p1XpClaimed = true; changed = true; }
+      if(m.p2===currentUser.uid && !m.p2XpClaimed && m.p2XpAmount){ total += m.p2XpAmount; m.p2XpClaimed = true; changed = true; }
+    });
+  });
+  if(t.status==='complete' && t.champion===currentUser.uid && !t.championBonusClaimed){
+    total += t.championBonusAmount || 300;
+    t.championBonusClaimed = true;
+    changed = true;
+  }
+  if(total>0) awardXp(total, 'Tournament');
+  return changed;
+}
+
+function renderTournamentSection(clan){
+  const wrap = document.getElementById('tournament-section');
+  if(!wrap) return;
+  const t = clan.tournament;
+  if(!t){
+    wrap.innerHTML = `
+      <h2 class="section-title">Tournament</h2>
+      <div class="card">
+        <div style="font-size:12.5px; color:var(--dim); margin-bottom:12px;">Run a bracket tournament — clan members duel it out on logged training volume. Everyone earns XP; winners earn more.</div>
+        <label>Duration</label>
+        <div class="duration-row">
+          <button class="duration-btn on" data-d="7" onclick="setTourneyDuration(7)">1 Week</button>
+          <button class="duration-btn" data-d="14" onclick="setTourneyDuration(14)">2 Weeks</button>
+          <button class="duration-btn" data-d="30" onclick="setTourneyDuration(30)">1 Month</button>
+        </div>
+        <button class="btn-primary" onclick="startTournament(tourneyDuration)">Start Tournament</button>
+      </div>`;
+    return;
+  }
+  let html = '<h2 class="section-title">Tournament</h2>';
+  if(t.status==='complete'){
+    const champ = t.players.find(p=>p.uid===t.champion);
+    html += `<div class="tourney-card" style="text-align:center;">
+      <div style="font-size:11px; letter-spacing:1.5px; color:var(--amber); text-transform:uppercase; margin-bottom:6px;">Champion</div>
+      <div class="display" style="font-size:19px; font-weight:600;">${escapeHtml(champ?champ.name:'—')}</div>
+    </div>
+    <button class="btn-ghost" style="width:100%; margin-bottom:14px;" onclick="document.getElementById('new-tourney-picker').style.display='block'; this.style.display='none';">Start a New Tournament</button>
+    <div id="new-tourney-picker" style="display:none;">
+      <div class="card">
+        <label>Duration</label>
+        <div class="duration-row">
+          <button class="duration-btn on" data-d="7" onclick="setTourneyDuration(7)">1 Week</button>
+          <button class="duration-btn" data-d="14" onclick="setTourneyDuration(14)">2 Weeks</button>
+          <button class="duration-btn" data-d="30" onclick="setTourneyDuration(30)">1 Month</button>
+        </div>
+        <button class="btn-primary" onclick="startTournament(tourneyDuration)">Start Tournament</button>
+      </div>
+    </div>`;
+  } else {
+    const round = t.rounds[t.currentRound];
+    const endsIn = round ? Math.max(0, Math.ceil((round[0].roundEnd - Date.now())/86400000)) : 0;
+    html += `<div class="tourney-card"><div style="font-size:12px; color:var(--dim);">Round ${t.currentRound+1} of ${t.numRounds} · ends in ${endsIn} day${endsIn!==1?'s':''}</div></div>`;
+  }
+  t.rounds.forEach((round, ri)=>{
+    html += `<div class="tourney-round-label">Round ${ri+1}</div>`;
+    round.forEach(m=>{
+      const p1n = m.p1Name || 'TBD';
+      const p2n = m.p2 ? (m.p2Name||'TBD') : (m.p1 ? 'BYE' : 'TBD');
+      const p1cls = m.resolved ? (m.winner===m.p1?'winner':'loser') : '';
+      const p2cls = m.resolved ? (m.winner===m.p2?'winner':'loser') : '';
+      html += `<div class="bracket-match">
+        <div class="bracket-player ${p1cls}">${escapeHtml(p1n)}${m.resolved&&m.p1vol?`<span class="bracket-vol">${Math.round(m.p1vol).toLocaleString()} lbs</span>`:''}</div>
+        <div class="bracket-vs">vs</div>
+        <div class="bracket-player ${p2cls}">${escapeHtml(p2n)}${m.resolved&&m.p2vol?`<span class="bracket-vol">${Math.round(m.p2vol).toLocaleString()} lbs</span>`:''}</div>
+      </div>`;
+    });
+  });
+  wrap.innerHTML = html;
 }
 
 async function loadClan(){
@@ -1516,7 +2053,17 @@ async function loadClan(){
         <div class="leader-val">${Math.round(r.volume).toLocaleString()} lbs</div>
       </div>
     `).join('');
-  }catch(e){ console.error('loadClan error', e); }
+
+    if(clan.tournament){
+      const advanced = await advanceTournamentIfNeeded(clan);
+      const claimed = claimTournamentXp(clan);
+      if(advanced || claimed){
+        try{ await db.collection('clans').doc(STATE.clanId).update({tournament: clan.tournament}); }
+        catch(e){ console.error('tournament save error', e); }
+      }
+    }
+    renderTournamentSection(clan);
+  }catch(e){ console.error('loadClan error', e); document.getElementById('clan-leaderboard').innerHTML = '<div class="empty-state">Couldn\'t load the clan — check your connection and try again.</div>'; }
 }
 
 function escapeHtml(s){
