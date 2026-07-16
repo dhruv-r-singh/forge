@@ -693,6 +693,41 @@
       <div id="profile-screen-settings" style="display:none;">
         <h2 class="section-title">Appearance</h2>
         <div class="theme-row" id="theme-picker"></div>
+
+        <h2 class="section-title">Sign-In Methods</h2>
+        <div class="card" id="linked-methods-list" style="margin-bottom:12px;"></div>
+
+        <div id="verify-email-form" class="card" style="display:none;">
+          <label>Verify Your Email</label>
+          <div style="font-size:12px; color:var(--dim); margin-bottom:10px;">Enter the code we emailed you, or send a new one.</div>
+          <input id="verify-email-code-input" type="text" inputmode="numeric" placeholder="6-digit code">
+          <button class="btn-primary" onclick="submitVerificationCode()">Verify</button>
+          <button class="btn-ghost" style="width:100%; margin-top:8px;" onclick="sendVerificationCode()">Send New Code</button>
+          <div id="verify-email-status" class="mono" style="font-size:11px; margin-top:8px; min-height:14px;"></div>
+        </div>
+
+        <div id="link-email-form" class="card" style="display:none;">
+          <label>Add Email Sign-In</label>
+          <input id="link-email-input" type="email" placeholder="Email">
+          <input id="link-email-pass-input" type="password" placeholder="Password">
+          <button class="btn-primary" onclick="submitLinkEmail()">Link Email</button>
+          <div id="link-email-status" class="mono" style="font-size:11px; margin-top:8px; min-height:14px;"></div>
+        </div>
+
+        <div id="link-phone-form" class="card" style="display:none;">
+          <label>Add Phone Sign-In</label>
+          <div id="link-phone-step-number">
+            <input id="link-phone-input" type="tel" placeholder="+1 555 555 5555">
+            <button class="btn-primary" onclick="submitLinkPhoneSendCode()">Send Code</button>
+            <div id="link-recaptcha-container"></div>
+          </div>
+          <div id="link-phone-step-code" style="display:none;">
+            <input id="link-phone-code-input" type="text" inputmode="numeric" placeholder="6-digit code">
+            <button class="btn-primary" onclick="submitLinkPhoneConfirm()">Verify & Link</button>
+          </div>
+          <div id="link-phone-status" class="mono" style="font-size:11px; margin-top:8px; min-height:14px;"></div>
+        </div>
+
         <h2 class="section-title">Help</h2>
         <button class="btn-ghost" style="width:100%; margin-bottom:22px;" onclick="closeProfileModal(); startTutorial();">Replay Tutorial</button>
         <h2 class="section-title">Danger Zone</h2>
@@ -778,14 +813,9 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
-// Some networks (school/corporate firewalls, some VPNs, some ad blockers) block Firestore's
-// default streaming connection while still allowing normal HTTPS through. This detects that
-// and falls back to long-polling instead, which works almost everywhere.
-// Some networks (school/corporate firewalls, some VPNs, some ad blockers) block Firestore's
-// default streaming connection while still allowing normal HTTPS through. Auto-detect wasn't
-// reliably catching this — forcing long-polling, and also falling back to XMLHttpRequest
-// instead of fetch() streaming, since some networks/proxies mishandle fetch-based streaming
-// in a way that causes silent hangs rather than a clean error.
+// Explicit LOCAL persistence — sessions survive closing the browser entirely, not just
+// page reloads. This is Firebase's default, but setting it explicitly removes any ambiguity.
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e=>console.error('setPersistence error', e));
 // Keeping a light auto-detect fallback for long-polling as general good practice —
 // the forced/fetch-stream workarounds are no longer needed now that we're off the
 // Enterprise-edition project that was actually causing the connection issues.
@@ -948,6 +978,7 @@ async function ensureUserDoc(){
   try{
     const snap = await withTimeout(ref.get(), 30000, 'Load account');
     if(!snap.exists){
+      const isPasswordAccount = currentUser.providerData.some(p=>p.providerId==='password');
       await withTimeout(ref.set({
         displayName: currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : 'Athlete'),
         photoURL: currentUser.photoURL || '',
@@ -962,9 +993,11 @@ async function ensureUserDoc(){
         streak: 0,
         lastWorkoutDate: null,
         referralCode: generateReferralCode(),
+        emailVerified: !isPasswordAccount, // Google accounts are already verified by Google; phone has no email
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       }), 30000, 'Create account');
-      sendWelcomeEmail(); // fire-and-forget — needs the Trigger Email extension, see setup notes
+      sendWelcomeEmail(); // fire-and-forget — sent via the custom Resend endpoint
+      if(isPasswordAccount) sendVerificationCode(); // fire-and-forget
       return true;
     }
     return false;
@@ -1021,6 +1054,48 @@ async function sendWelcomeEmail(){
   }catch(e){ console.error('sendWelcomeEmail error', e); }
 }
 
+// ---------------- EMAIL VERIFICATION (custom-branded code, not Firebase's default email) ----------------
+function generateVerificationCode(){
+  return String(Math.floor(100000 + Math.random()*900000)); // 6 digits
+}
+async function sendVerificationCode(){
+  if(!currentUser || !currentUser.email) return;
+  const code = generateVerificationCode();
+  const expires = Date.now() + 15*60*1000; // 15 minutes
+  try{
+    await db.collection('users').doc(currentUser.uid).update({ emailVerifyCode: code, emailVerifyExpires: expires });
+    STATE.emailVerifyPending = true;
+    await fetch('https://forge-verify-api.vercel.app/api/send-verification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: currentUser.email, name: currentUser.displayName || '', code })
+    });
+    showToast('Verification code sent — check your email.');
+  }catch(e){ console.error('sendVerificationCode error', e); showToast('Couldn\'t send the code — try again.'); }
+}
+async function submitVerificationCode(){
+  const statusEl = document.getElementById('verify-email-status');
+  const entered = document.getElementById('verify-email-code-input').value.trim();
+  if(!entered){ statusEl.style.color = 'var(--red)'; statusEl.textContent = 'Enter the code from your email.'; return; }
+  statusEl.style.color = 'var(--dim)'; statusEl.textContent = 'Checking...';
+  try{
+    const snap = await db.collection('users').doc(currentUser.uid).get();
+    const udata = snap.data() || {};
+    if(!udata.emailVerifyCode || Date.now() > (udata.emailVerifyExpires||0)){
+      statusEl.style.color = 'var(--red)'; statusEl.textContent = 'That code expired — send a new one.';
+      return;
+    }
+    if(entered !== udata.emailVerifyCode){
+      statusEl.style.color = 'var(--red)'; statusEl.textContent = 'That code doesn\'t match — check it and try again.';
+      return;
+    }
+    await db.collection('users').doc(currentUser.uid).update({ emailVerified: true, emailVerifyCode: firebase.firestore.FieldValue.delete(), emailVerifyExpires: firebase.firestore.FieldValue.delete() });
+    STATE.emailVerified = true;
+    statusEl.style.color = 'var(--cyan)'; statusEl.textContent = 'Verified!';
+    renderLinkedMethods();
+  }catch(e){ console.error('submitVerificationCode error', e); statusEl.style.color = 'var(--red)'; statusEl.textContent = 'Something went wrong — try again.'; }
+}
+
 // ---------------- STATE ----------------
 let STATE = {
   workouts: [],   // {id, date, dayType, exercises:[{name, sets:[{weight,reps,done}]}], xpEarned}
@@ -1033,6 +1108,7 @@ let STATE = {
   streak: 0,
   lastWorkoutDate: null,
   referralCode: '',
+  emailVerified: true,
 };
 
 // ---------------- LOCAL PERSISTENCE (autosave everything, even offline) ----------------
@@ -1229,7 +1305,93 @@ function switchProfileScreen(name){
   document.querySelectorAll('#profile-modal-overlay .pill').forEach(p=>p.classList.toggle('active', p.dataset.pscreen===name));
   document.getElementById('profile-screen-stats').style.display = name==='stats' ? 'block' : 'none';
   document.getElementById('profile-screen-settings').style.display = name==='settings' ? 'block' : 'none';
+  if(name==='settings') renderLinkedMethods();
 }
+
+// ---------------- ACCOUNT LINKING (sign in with either email or phone on the same account) ----------------
+function renderLinkedMethods(){
+  const el = document.getElementById('linked-methods-list');
+  if(!el || !currentUser) return;
+  const providers = currentUser.providerData.map(p=>p.providerId);
+  const has = (id)=>providers.includes(id);
+  el.innerHTML =
+    '<div class="stat-row"><span>Google</span><span>'+(has('google.com')?'✓ Linked':'Not linked')+'</span></div>' +
+    '<div class="stat-row"><span>Email</span><span>'+(has('password')?'✓ Linked':'Not linked')+(has('password')?(STATE.emailVerified?' · ✓ Verified':' · Unverified'):'')+'</span></div>' +
+    '<div class="stat-row"><span>Phone</span><span>'+(has('phone')?'✓ Linked':'Not linked')+'</span></div>';
+  document.getElementById('link-email-form').style.display = has('password') ? 'none' : 'block';
+  document.getElementById('link-phone-form').style.display = has('phone') ? 'none' : 'block';
+  // reset any in-progress phone-link UI back to step one each time this renders
+  document.getElementById('link-phone-step-number').style.display = 'block';
+  document.getElementById('link-phone-step-code').style.display = 'none';
+  const verifyForm = document.getElementById('verify-email-form');
+  if(verifyForm) verifyForm.style.display = (has('password') && !STATE.emailVerified) ? 'block' : 'none';
+}
+
+async function submitLinkEmail(){
+  const statusEl = document.getElementById('link-email-status');
+  const email = document.getElementById('link-email-input').value.trim();
+  const pass = document.getElementById('link-email-pass-input').value;
+  if(!email || !pass){ statusEl.style.color = 'var(--red)'; statusEl.textContent = 'Enter an email and password.'; return; }
+  statusEl.style.color = 'var(--dim)'; statusEl.textContent = 'Linking...';
+  try{
+    const cred = firebase.auth.EmailAuthProvider.credential(email, pass);
+    await currentUser.linkWithCredential(cred);
+    STATE.emailVerified = false;
+    await db.collection('users').doc(currentUser.uid).update({ email, emailVerified: false });
+    statusEl.style.color = 'var(--cyan)'; statusEl.textContent = 'Email linked — you can sign in with either now.';
+    document.getElementById('link-email-input').value = '';
+    document.getElementById('link-email-pass-input').value = '';
+    renderLinkedMethods();
+    sendVerificationCode();
+  }catch(e){
+    console.error('link email error', e);
+    statusEl.style.color = 'var(--red)';
+    statusEl.textContent = e.code==='auth/email-already-in-use' ? 'That email is already used by another account.' : ('Failed: '+(e.code||e.message||'try again'));
+  }
+}
+
+let linkPhoneConfirmationResult = null;
+function ensureLinkRecaptcha(){
+  if(!window.linkRecaptchaVerifier){
+    window.linkRecaptchaVerifier = new firebase.auth.RecaptchaVerifier('link-recaptcha-container', { size:'invisible' });
+  }
+  return window.linkRecaptchaVerifier;
+}
+async function submitLinkPhoneSendCode(){
+  const statusEl = document.getElementById('link-phone-status');
+  const phone = document.getElementById('link-phone-input').value.trim();
+  if(!phone){ statusEl.style.color = 'var(--red)'; statusEl.textContent = 'Enter a phone number, including country code.'; return; }
+  statusEl.style.color = 'var(--dim)'; statusEl.textContent = 'Sending code...';
+  try{
+    const verifier = ensureLinkRecaptcha();
+    linkPhoneConfirmationResult = await currentUser.linkWithPhoneNumber(phone, verifier);
+    document.getElementById('link-phone-step-number').style.display = 'none';
+    document.getElementById('link-phone-step-code').style.display = 'block';
+    statusEl.style.color = 'var(--dim)'; statusEl.textContent = 'Code sent — check your texts.';
+  }catch(e){
+    console.error('link phone send error', e);
+    statusEl.style.color = 'var(--red)';
+    statusEl.textContent = e.code==='auth/credential-already-in-use' ? 'That phone number is already linked to another account.' : ('Failed: '+(e.code||e.message||'try again'));
+  }
+}
+async function submitLinkPhoneConfirm(){
+  const statusEl = document.getElementById('link-phone-status');
+  const code = document.getElementById('link-phone-code-input').value.trim();
+  if(!code || !linkPhoneConfirmationResult){ statusEl.style.color = 'var(--red)'; statusEl.textContent = 'Enter the code you received.'; return; }
+  statusEl.style.color = 'var(--dim)'; statusEl.textContent = 'Verifying...';
+  try{
+    await linkPhoneConfirmationResult.confirm(code);
+    statusEl.style.color = 'var(--cyan)'; statusEl.textContent = 'Phone linked — you can sign in with either now.';
+    document.getElementById('link-phone-input').value = '';
+    document.getElementById('link-phone-code-input').value = '';
+    renderLinkedMethods();
+  }catch(e){
+    console.error('link phone confirm error', e);
+    statusEl.style.color = 'var(--red)';
+    statusEl.textContent = 'Failed: '+(e.code||e.message||'try again');
+  }
+}
+
 async function saveProfileStats(){
   STATE.stats = {
     height: document.getElementById('stat-height').value,
@@ -1476,6 +1638,7 @@ async function loadState(){
     STATE.streak = udata.streak || 0;
     STATE.lastWorkoutDate = udata.lastWorkoutDate || null;
     STATE.referralCode = udata.referralCode || '';
+    STATE.emailVerified = udata.emailVerified !== false; // undefined counts as verified (pre-existing/Google/phone accounts)
     STATE.onboarded = udata.onboarded !== false; // undefined counts as onboarded (pre-existing accounts)
     if(udata.theme) setTheme(udata.theme, true);
   }catch(e){ console.error('loadState user doc error', e); }
