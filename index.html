@@ -28,6 +28,7 @@
   body[data-theme="steel"]{ --bg:#0B1420; --panel:#131E30; --panel-raised:#18243890; --line:#22304A; --amber:#7FB8FF; --cyan:#9AE6C4; }
   body[data-theme="ember"]{ --bg:#180D0A; --panel:#241512; --panel-raised:#2E1A1590; --line:#3A231C; --amber:#FF6B4A; --cyan:#FFD166; }
   body[data-theme="midnight"]{ --bg:#0D0B1A; --panel:#17142B; --panel-raised:#1D1A3590; --line:#2A2650; --amber:#B388FF; --cyan:#64D9E8; }
+  body[data-theme="mono"]{ --bg:#0A0A0A; --panel:#161616; --panel-raised:#1E1E1E90; --line:#333333; --amber:#F2F2F2; --cyan:#9A9A9A; }
   *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
   html,body{margin:0; padding:0; background:var(--bg); color:var(--text); font-family:'Manrope',sans-serif; height:100%; overflow-x:hidden;}
   body{ padding-bottom: env(safe-area-inset-bottom); }
@@ -322,6 +323,25 @@
   .duration-row{ display:flex; gap:8px; margin-bottom:12px; }
   .duration-btn{ flex:1; background:var(--panel-raised); border:1px solid var(--line); color:var(--dim); font-size:12px; font-weight:600; padding:10px 0; border-radius:8px; }
   .duration-btn.on{ background:var(--amber); color:#1A1200; border-color:var(--amber); }
+
+  /* Guided tour */
+  .tour-overlay{ display:none; position:fixed; inset:0; z-index:90; }
+  .tour-overlay.open{ display:block; }
+  .tour-spotlight{
+    position:fixed; border-radius:12px; box-shadow:0 0 0 9999px rgba(4,7,14,0.82);
+    border:2px solid var(--amber); transition:all .25s ease; pointer-events:none; z-index:91;
+  }
+  .tour-card{
+    position:fixed; z-index:92; width:270px; background:var(--panel); border:1px solid var(--amber);
+    border-radius:14px; padding:16px; box-shadow:0 8px 30px rgba(0,0,0,0.5); transition:all .25s ease;
+  }
+  .tour-title{ font-family:'Oswald',sans-serif; font-size:15px; font-weight:600; margin-bottom:6px; }
+  .tour-body{ font-size:12.5px; color:var(--dim); line-height:1.5; margin-bottom:10px; }
+  .tour-progress{ font-size:10px; color:var(--dimmer); margin-bottom:12px; }
+  .stat-row{ display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--line); font-size:12.5px; }
+  .stat-row:last-child{ border-bottom:none; }
+  .stat-row span:first-child{ color:var(--dim); }
+  .stat-row span:last-child{ font-family:'IBM Plex Mono',monospace; font-weight:600; }
 </style>
 </head>
 <body>
@@ -409,7 +429,7 @@
         <div class="readout-bar"><div class="readout-bar-fill" id="r-carb-bar" style="background:#8B9DFF;width:0%"></div></div>
       </div>
     </div>
-    <div class="rank-strip">
+    <div class="rank-strip" onclick="openProfileModal()" style="cursor:pointer;">
       <div class="rank-info">
         <div class="rank-name" id="rank-name">Recruit</div>
         <div class="rank-xp mono" id="rank-xp-label">0 / 100 XP</div>
@@ -644,24 +664,66 @@
           <div class="profile-email" id="profile-email">--</div>
         </div>
       </div>
-      <h2 class="section-title">Appearance</h2>
-      <div class="theme-row" id="theme-picker"></div>
-      <h2 class="section-title">Help</h2>
-      <button class="btn-ghost" style="width:100%; margin-bottom:22px;" onclick="closeProfileModal(); startTutorial();">Replay Tutorial</button>
-      <h2 class="section-title">Danger Zone</h2>
-      <button class="danger-btn" onclick="confirmResetProgress()">Reset All Progress</button>
-      <button class="btn-ghost" style="width:100%; margin-top:10px; color:var(--red);" onclick="signOutUser()">Sign Out</button>
+      <div class="pill-row">
+        <button class="pill active" data-pscreen="stats" onclick="switchProfileScreen('stats')">STATS</button>
+        <button class="pill" data-pscreen="settings" onclick="switchProfileScreen('settings')">SETTINGS</button>
+      </div>
+
+      <div id="profile-screen-stats">
+        <label>Height (in)</label>
+        <input id="stat-height" type="number" inputmode="decimal" placeholder="e.g. 70" onchange="saveProfileStats()">
+        <label>Weight (lbs)</label>
+        <input id="stat-weight" type="number" inputmode="decimal" placeholder="e.g. 165" onchange="saveProfileStats()">
+        <label>Age</label>
+        <input id="stat-age" type="number" inputmode="numeric" placeholder="e.g. 17" onchange="saveProfileStats()">
+        <h2 class="section-title" style="margin-top:18px;">Training Stats</h2>
+        <div class="card" id="profile-training-stats" style="margin-bottom:0;"></div>
+      </div>
+
+      <div id="profile-screen-settings" style="display:none;">
+        <h2 class="section-title">Appearance</h2>
+        <div class="theme-row" id="theme-picker"></div>
+        <h2 class="section-title">Help</h2>
+        <button class="btn-ghost" style="width:100%; margin-bottom:22px;" onclick="closeProfileModal(); startTutorial();">Replay Tutorial</button>
+        <h2 class="section-title">Danger Zone</h2>
+        <button class="danger-btn" onclick="confirmResetProgress()">Reset All Progress</button>
+        <button class="btn-ghost" style="width:100%; margin-top:10px; color:var(--red);" onclick="signOutUser()">Sign Out</button>
+      </div>
     </div>
   </div>
 
-  <div class="modal-overlay" id="tutorial-overlay" style="align-items:center;">
-    <div class="modal-sheet" style="border-radius:18px; max-width:340px; text-align:center;">
-      <div style="font-size:36px; margin-bottom:10px;" id="tutorial-icon">🔥</div>
-      <div class="modal-title" id="tutorial-title" style="text-align:center;">Welcome</div>
-      <div style="font-size:13px; color:var(--dim); line-height:1.55; margin:10px 0 18px 0;" id="tutorial-body"></div>
-      <div style="font-size:10px; color:var(--dimmer); margin-bottom:14px;" class="mono" id="tutorial-progress">1 / 6</div>
-      <button class="btn-primary" id="tutorial-next-btn" onclick="tutorialNext()">Next</button>
-      <button class="btn-ghost" id="tutorial-skip-btn" style="width:100%; margin-top:8px;" onclick="closeTutorial()">Skip tour</button>
+  <div class="modal-overlay" id="coach-modal-overlay" style="align-items:center;" onclick="if(event.target===this) closeCoachModal()">
+    <div class="modal-sheet" style="border-radius:18px; max-width:340px;">
+      <button class="modal-close" onclick="closeCoachModal()">×</button>
+      <div class="modal-title">Coach's Notes</div>
+      <div id="coach-modal-body" style="font-size:13px; color:var(--dim); line-height:1.6; margin-top:10px; white-space:pre-wrap;">Analyzing...</div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="profile-setup-overlay" style="align-items:center;">
+    <div class="modal-sheet" style="border-radius:18px; max-width:320px;">
+      <div class="modal-title" style="margin-bottom:4px;">One quick thing</div>
+      <div style="font-size:12.5px; color:var(--dim); margin-bottom:16px;">Tell us a bit about yourself to personalize FORGE.</div>
+      <label>Name</label>
+      <input id="setup-name" placeholder="Your name">
+      <label>Height (in)</label>
+      <input id="setup-height" type="number" inputmode="decimal" placeholder="e.g. 70">
+      <label>Weight (lbs)</label>
+      <input id="setup-weight" type="number" inputmode="decimal" placeholder="e.g. 165">
+      <label>Age</label>
+      <input id="setup-age" type="number" inputmode="numeric" placeholder="e.g. 17">
+      <button class="btn-primary" onclick="submitProfileSetup()">Continue</button>
+    </div>
+  </div>
+
+  <div class="tour-overlay" id="tour-overlay">
+    <div class="tour-spotlight" id="tour-spotlight"></div>
+    <div class="tour-card" id="tour-card">
+      <div class="tour-title" id="tour-title">Welcome</div>
+      <div class="tour-body" id="tour-body"></div>
+      <div class="tour-progress mono" id="tour-progress">1 / 9</div>
+      <button class="btn-primary" id="tour-next-btn" onclick="tourNext()">Next</button>
+      <button class="btn-ghost" id="tour-skip-btn" style="width:100%; margin-top:8px;" onclick="closeTutorial()">Skip tour</button>
     </div>
   </div>
 
@@ -681,9 +743,9 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 // Some networks (school/corporate firewalls, some VPNs, some ad blockers) block Firestore's
-// default streaming connection while still allowing normal HTTPS through. This detects that
-// and falls back to long-polling instead, which works almost everywhere.
-db.settings({ experimentalAutoDetectLongPolling: true });
+// default streaming connection while still allowing normal HTTPS through. Force long-polling
+// unconditionally (skip auto-detection, which isn't reliably triggering on some networks).
+db.settings({ experimentalForceLongPolling: true, merge: true });
 const googleProvider = new firebase.auth.GoogleAuthProvider();
 let currentUser = null;
 
@@ -789,8 +851,24 @@ auth.getRedirectResult().catch(err=>{
   if(err && err.code){ console.error('getRedirectResult error', err.code, err.message); showAuthError(err); }
 });
 
+const PER_USER_DRAFT_KEYS = ['forge_state_cache','forge_draft_builder','forge_draft_session','forge_draft_daytype','forge_draft_food','forge_draft_newplandays'];
+function clearLocalDrafts(){
+  PER_USER_DRAFT_KEYS.forEach(k=>localStorage.removeItem(k));
+}
+
 auth.onAuthStateChanged(async (user) => {
   if(user){
+    // If this is a different account than last time on this device, wipe any cached/draft
+    // data from the previous account so it can't bleed into the new one.
+    const lastUid = localStorage.getItem('forge_last_uid');
+    if(lastUid && lastUid !== user.uid){
+      clearLocalDrafts();
+      STATE = { workouts: [], food: [], targets: { calories: 2400, protein: 150, fat: 70, carb: 300 }, clanId: null, plans: [], xp: 0, stats: { height:'', weight:'', age:'' }, streak: 0, lastWorkoutDate: null };
+      currentExercises = [];
+      activeSession = null;
+    }
+    localStorage.setItem('forge_last_uid', user.uid);
+
     currentUser = user;
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
@@ -798,6 +876,7 @@ auth.onAuthStateChanged(async (user) => {
     document.getElementById('user-name-label').textContent = (user.displayName || (user.email ? user.email.split('@')[0] : user.phoneNumber) || 'Athlete').split(' ')[0];
     const isNewUser = await ensureUserDoc();
     await loadState();
+    if(isNewUser){ openProfileSetup(); } // collect height/weight/age before the tutorial
   } else {
     currentUser = null;
     document.getElementById('login-screen').style.display = 'flex';
@@ -820,6 +899,9 @@ async function ensureUserDoc(){
         xp: 0,
         theme: 'forge',
         onboarded: false,
+        stats: { height:'', weight:'', age:'' },
+        streak: 0,
+        lastWorkoutDate: null,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       sendWelcomeEmail(); // fire-and-forget — needs the Trigger Email extension, see setup notes
@@ -850,6 +932,9 @@ let STATE = {
   clanId: null,
   plans: [],      // {id, name, days:[0-6], exercises:[{exId,name,targetSets,targetReps}]}
   xp: 0,
+  stats: { height:'', weight:'', age:'' },
+  streak: 0,
+  lastWorkoutDate: null,
 };
 
 // ---------------- LOCAL PERSISTENCE (autosave everything, even offline) ----------------
@@ -865,7 +950,8 @@ function loadDraft(key, fallback){
 function persistLocalState(){
   saveDraft('forge_state_cache', {
     workouts: STATE.workouts, food: STATE.food, targets: STATE.targets,
-    clanId: STATE.clanId, plans: STATE.plans, xp: STATE.xp
+    clanId: STATE.clanId, plans: STATE.plans, xp: STATE.xp,
+    stats: STATE.stats, streak: STATE.streak, lastWorkoutDate: STATE.lastWorkoutDate
   });
 }
 function genId(){ return Date.now().toString() + Math.floor(Math.random()*10000); }
@@ -938,6 +1024,7 @@ const THEMES = [
   {id:'steel', name:'Steel', c1:'#7FB8FF', c2:'#9AE6C4'},
   {id:'ember', name:'Ember', c1:'#FF6B4A', c2:'#FFD166'},
   {id:'midnight', name:'Midnight', c1:'#B388FF', c2:'#64D9E8'},
+  {id:'mono', name:'Mono', c1:'#F2F2F2', c2:'#9A9A9A'},
 ];
 let currentTheme = loadDraft('forge_theme', 'forge');
 document.body.dataset.theme = currentTheme;
@@ -964,68 +1051,219 @@ function openProfileModal(){
   document.getElementById('profile-avatar').src = currentUser.photoURL || '';
   document.getElementById('profile-name').textContent = currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : (currentUser.phoneNumber || 'Athlete'));
   document.getElementById('profile-email').textContent = currentUser.email || currentUser.phoneNumber || '';
+  const stats = STATE.stats || {};
+  document.getElementById('stat-height').value = stats.height || '';
+  document.getElementById('stat-weight').value = stats.weight || '';
+  document.getElementById('stat-age').value = stats.age || '';
+  renderProfileTrainingStats();
+  switchProfileScreen('stats');
   renderThemePicker();
   document.getElementById('profile-modal-overlay').classList.add('open');
 }
 function closeProfileModal(){
   document.getElementById('profile-modal-overlay').classList.remove('open');
 }
+function switchProfileScreen(name){
+  document.querySelectorAll('#profile-modal-overlay .pill').forEach(p=>p.classList.toggle('active', p.dataset.pscreen===name));
+  document.getElementById('profile-screen-stats').style.display = name==='stats' ? 'block' : 'none';
+  document.getElementById('profile-screen-settings').style.display = name==='settings' ? 'block' : 'none';
+}
+async function saveProfileStats(){
+  STATE.stats = {
+    height: document.getElementById('stat-height').value,
+    weight: document.getElementById('stat-weight').value,
+    age: document.getElementById('stat-age').value
+  };
+  persistLocalState();
+  if(currentUser){
+    try{ await db.collection('users').doc(currentUser.uid).update({ stats: STATE.stats }); }
+    catch(e){ console.error('saveProfileStats error', e); }
+  }
+}
+function computeTrainingStats(){
+  let totalVolume = 0, totalSets = 0;
+  STATE.workouts.forEach(w=>{
+    (w.exercises||[]).forEach(ex=>(ex.sets||[]).forEach(s=>{
+      totalSets++;
+      totalVolume += (parseFloat(s.weight)||0) * (parseFloat(s.reps)||0);
+    }));
+  });
+  return { totalWorkouts: STATE.workouts.length, totalVolume, totalSets, streak: STATE.streak||0 };
+}
+function renderProfileTrainingStats(){
+  const { current, next } = getRankInfo(STATE.xp);
+  const s = computeTrainingStats();
+  const el = document.getElementById('profile-training-stats');
+  if(!el) return;
+  el.innerHTML =
+    '<div class="stat-row"><span>Rank</span><span>'+current.name+'</span></div>' +
+    '<div class="stat-row"><span>XP</span><span>'+STATE.xp+(next?' / '+next.min:' (MAX)')+'</span></div>' +
+    '<div class="stat-row"><span>Current Streak</span><span>'+s.streak+' day'+(s.streak!==1?'s':'')+'</span></div>' +
+    '<div class="stat-row"><span>Total Workouts</span><span>'+s.totalWorkouts+'</span></div>' +
+    '<div class="stat-row"><span>Total Sets Logged</span><span>'+s.totalSets+'</span></div>' +
+    '<div class="stat-row"><span>Total Volume</span><span>'+Math.round(s.totalVolume).toLocaleString()+' lbs</span></div>';
+}
+
+// Called once per completed workout (freeform or structured). Awards streak XP and
+// returns the bonus so the caller can fold it into its own toast.
+function recordStreak(){
+  const today = todayStr();
+  if(STATE.lastWorkoutDate === today) return 0; // already logged today, streak unchanged
+  if(STATE.lastWorkoutDate){
+    const diffDays = Math.round((new Date(today+'T00:00:00') - new Date(STATE.lastWorkoutDate+'T00:00:00')) / 86400000);
+    STATE.streak = diffDays===1 ? (STATE.streak||0)+1 : 1;
+  } else {
+    STATE.streak = 1;
+  }
+  STATE.lastWorkoutDate = today;
+  let bonus = 10 + Math.min(STATE.streak*2, 40);
+  if(STATE.streak===7) bonus += 50;
+  if(STATE.streak===30) bonus += 200;
+  if(STATE.streak===100) bonus += 1000;
+  if(currentUser){
+    db.collection('users').doc(currentUser.uid).update({ streak: STATE.streak, lastWorkoutDate: STATE.lastWorkoutDate }).catch(e=>console.error('streak save error', e));
+  }
+  persistLocalState();
+  return bonus;
+}
+
 async function confirmResetProgress(){
   if(!confirm('This permanently deletes all your workouts, food logs, workout plans, and XP. This can\'t be undone. Continue?')) return;
+  let serverError = false;
   try{
     const deletes = [];
     const wSnap = await db.collection('users').doc(currentUser.uid).collection('workouts').get();
-    wSnap.forEach(d=>deletes.push(d.ref.delete()));
+    wSnap.forEach(d=>deletes.push(d.ref.delete().catch(e=>{ console.error('delete workout error', e); serverError = true; })));
     const fSnap = await db.collection('users').doc(currentUser.uid).collection('food').get();
-    fSnap.forEach(d=>deletes.push(d.ref.delete()));
+    fSnap.forEach(d=>deletes.push(d.ref.delete().catch(e=>{ console.error('delete food error', e); serverError = true; })));
     await Promise.all(deletes);
-    await db.collection('users').doc(currentUser.uid).update({ plans: [], xp: 0 });
-  }catch(e){ console.error('reset progress error', e); alert('Something went wrong resetting your progress — try again.'); return; }
-  STATE.workouts = []; STATE.food = []; STATE.plans = []; STATE.xp = 0;
+    await db.collection('users').doc(currentUser.uid).update({ plans: [], xp: 0, streak: 0, lastWorkoutDate: null });
+  }catch(e){ console.error('reset progress error', e); serverError = true; }
+  // Clear local state regardless — the person asked for a fresh start, and stale local
+  // data being visible even if the server call partially failed is the worse outcome.
+  STATE.workouts = []; STATE.food = []; STATE.plans = []; STATE.xp = 0; STATE.streak = 0; STATE.lastWorkoutDate = null;
   activeSession = null; currentExercises = [];
-  localStorage.removeItem('forge_draft_session');
-  localStorage.removeItem('forge_draft_builder');
+  clearLocalDrafts();
   persistLocalState();
   closeProfileModal();
   renderAll();
   switchWorkoutView('today');
+  if(serverError){
+    alert('Reset locally, but some data may not have cleared on the server — check your connection and try again if old data reappears after a refresh.');
+  }
 }
 
-// ---------------- TUTORIAL ----------------
-const TUTORIAL_STEPS = [
-  { icon:'🔥', title:'Welcome to FORGE', body:'Your training command center — plan workouts, track food, and level up your rank. Here\'s a quick tour.' },
-  { icon:'▲', title:'Workout', body:'Build workout plans, schedule them to specific days, then check off sets as you train. Every set and every workout earns you XP.' },
-  { icon:'◈', title:'Exercises', body:'Browse 100+ exercises with muscle breakdowns and 3D form previews. Tap + to drop one straight into your session or workout plan.' },
-  { icon:'◆', title:'Food', body:'Log meals and track calories, protein, fat, and carbs against your daily targets shown up top.' },
-  { icon:'▮', title:'Progress', body:'Watch your strength climb over time, and set your daily nutrition targets.' },
-  { icon:'⬡', title:'Clan', body:'Team up with friends, compare weekly volume, and run tournaments to see who\'s grinding hardest.' },
-];
-let tutorialStep = 0;
-function startTutorial(){
-  tutorialStep = 0;
-  renderTutorialStep();
-  document.getElementById('tutorial-overlay').classList.add('open');
-}
-function renderTutorialStep(){
-  const s = TUTORIAL_STEPS[tutorialStep];
-  let body = s.body;
-  if(tutorialStep===0 && currentUser){
-    const first = (currentUser.displayName || '').split(' ')[0];
-    if(first) body = 'Welcome, '+first+'! ' + body;
+// ---------------- POST-WORKOUT COACH ANALYSIS (Claude, via serverless endpoint) ----------------
+async function showWorkoutAnalysis(entry){
+  document.getElementById('coach-modal-overlay').classList.add('open');
+  document.getElementById('coach-modal-body').textContent = 'Analyzing your workout...';
+  try{
+    const recent = STATE.workouts.slice(0, 6).filter(w=>w.id!==entry.id);
+    const r = await fetch('https://forge-coach-api.vercel.app/api/analyze-workout', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workout: entry, recent })
+    });
+    const data = await r.json();
+    document.getElementById('coach-modal-body').textContent = data.analysis || 'Couldn\'t generate an analysis this time — try again after your next workout.';
+  }catch(e){
+    console.error('coach analysis error', e);
+    document.getElementById('coach-modal-body').textContent = 'Couldn\'t reach the coach right now — check your connection.';
   }
-  document.getElementById('tutorial-icon').textContent = s.icon;
-  document.getElementById('tutorial-title').textContent = s.title;
-  document.getElementById('tutorial-body').textContent = body;
-  document.getElementById('tutorial-progress').textContent = (tutorialStep+1)+' / '+TUTORIAL_STEPS.length;
-  document.getElementById('tutorial-next-btn').textContent = tutorialStep===TUTORIAL_STEPS.length-1 ? "Let's go" : 'Next';
-  document.getElementById('tutorial-skip-btn').style.display = tutorialStep===TUTORIAL_STEPS.length-1 ? 'none' : 'inline-block';
 }
-function tutorialNext(){
-  if(tutorialStep < TUTORIAL_STEPS.length-1){ tutorialStep++; renderTutorialStep(); }
+function closeCoachModal(){
+  document.getElementById('coach-modal-overlay').classList.remove('open');
+}
+
+// ---------------- MANDATORY PROFILE SETUP (email/phone signups only — Google already gives us a name/photo) ----------------
+function openProfileSetup(){
+  const provider = currentUser.providerData[0] && currentUser.providerData[0].providerId;
+  if(provider === 'google.com'){ startTutorial(); return; }
+  document.getElementById('setup-name').value = currentUser.displayName || '';
+  document.getElementById('profile-setup-overlay').classList.add('open');
+}
+async function submitProfileSetup(){
+  const name = document.getElementById('setup-name').value.trim();
+  if(!name){ alert('Enter a name to continue.'); return; }
+  const height = document.getElementById('setup-height').value;
+  const weight = document.getElementById('setup-weight').value;
+  const age = document.getElementById('setup-age').value;
+  STATE.stats = { height, weight, age };
+  document.getElementById('user-name-label').textContent = name.split(' ')[0];
+  try{
+    await db.collection('users').doc(currentUser.uid).update({ displayName: name, stats: STATE.stats });
+    await currentUser.updateProfile({ displayName: name });
+  }catch(e){ console.error('submitProfileSetup error', e); }
+  persistLocalState();
+  document.getElementById('profile-setup-overlay').classList.remove('open');
+  startTutorial();
+}
+
+// ---------------- GUIDED TOUR (spotlight over real UI, not just popups) ----------------
+const TOUR_STEPS = [
+  { title:'Welcome to FORGE', body:'Your training command center. Let\'s walk through it — tap Next to follow along.' },
+  { tab:'tab-workout', view:'today', selector:'#tab-workout .pill-row', title:'Workout', body:'TODAY shows what\'s scheduled. PLANS is where you build workouts. HISTORY is everything you\'ve logged.' },
+  { tab:'tab-workout', view:'plans', selector:'#new-plan-name', title:'Build a plan', body:'Name a workout, pick which days it happens, then add exercises to it from the Exercises tab.' },
+  { tab:'tab-exercises', selector:'#ex-search', title:'Exercises', body:'100+ exercises with muscle breakdowns and 3D form previews. Tap + on any of them to add it to a session or plan.' },
+  { tab:'tab-food', selector:'#food-name', title:'Food', body:'Log meals here — protein, fat, carbs, and calories track against your daily targets up top.' },
+  { tab:'tab-progress', selector:'#tab-progress', title:'Progress', body:'Your strength over time, plus where you set your daily nutrition targets.' },
+  { tab:'tab-clan', selector:'#tab-clan', title:'Clan', body:'Team up with friends, compare weekly volume, and run tournaments for bonus XP.' },
+  { selector:'.rank-strip', title:'Your Rank', body:'Every set you log earns XP. Tap this bar anytime to see your full stats.' },
+  { selector:'.user-info', title:'Profile', body:'Your stats, appearance settings, and account options live here. That\'s the tour — go get after it.' },
+];
+let tourStep = 0;
+
+function startTutorial(){
+  tourStep = 0;
+  renderTourStep();
+}
+async function renderTourStep(){
+  const s = TOUR_STEPS[tourStep];
+  if(s.tab) switchTab(s.tab);
+  if(s.view) switchWorkoutView(s.view);
+  await new Promise(r=>setTimeout(r, 60)); // let the DOM settle after any tab switch before measuring
+  positionTourOverlay(s);
+}
+function positionTourOverlay(step){
+  const overlay = document.getElementById('tour-overlay');
+  const card = document.getElementById('tour-card');
+  const spotlight = document.getElementById('tour-spotlight');
+  overlay.classList.add('open');
+  document.getElementById('tour-title').textContent = step.title;
+  document.getElementById('tour-body').textContent = step.body;
+  document.getElementById('tour-progress').textContent = (tourStep+1)+' / '+TOUR_STEPS.length;
+  document.getElementById('tour-next-btn').textContent = tourStep===TOUR_STEPS.length-1 ? "Let's go" : 'Next';
+  document.getElementById('tour-skip-btn').style.display = tourStep===TOUR_STEPS.length-1 ? 'none' : 'inline-block';
+
+  const target = step.selector ? document.querySelector(step.selector) : null;
+  if(!target){
+    spotlight.style.display = 'none';
+    card.style.top = '50%'; card.style.left = '50%'; card.style.transform = 'translate(-50%,-50%)';
+    return;
+  }
+  const rect = target.getBoundingClientRect();
+  const pad = 8;
+  spotlight.style.display = 'block';
+  spotlight.style.top = (rect.top-pad)+'px';
+  spotlight.style.left = (rect.left-pad)+'px';
+  spotlight.style.width = (rect.width+pad*2)+'px';
+  spotlight.style.height = (rect.height+pad*2)+'px';
+  target.scrollIntoView({ block:'center', behavior:'instant' });
+
+  const spaceBelow = window.innerHeight - rect.bottom;
+  const top = spaceBelow > 220 ? rect.bottom+16 : Math.max(16, rect.top-16);
+  const usingBelow = spaceBelow > 220;
+  card.style.transform = 'none';
+  card.style.left = Math.max(12, Math.min(rect.left, window.innerWidth-292))+'px';
+  card.style.top = usingBelow ? top+'px' : 'auto';
+  card.style.bottom = usingBelow ? 'auto' : (window.innerHeight-top)+'px';
+}
+function tourNext(){
+  if(tourStep < TOUR_STEPS.length-1){ tourStep++; renderTourStep(); }
   else closeTutorial();
 }
 async function closeTutorial(){
-  document.getElementById('tutorial-overlay').classList.remove('open');
+  document.getElementById('tour-overlay').classList.remove('open');
+  switchTab('tab-workout');
   if(currentUser){
     try{ await db.collection('users').doc(currentUser.uid).update({onboarded:true}); }catch(e){ console.error('onboarded save error', e); }
   }
@@ -1057,6 +1295,9 @@ async function loadState(){
     STATE.clanId = cached.clanId || null;
     STATE.plans = cached.plans || [];
     STATE.xp = cached.xp || 0;
+    STATE.stats = cached.stats || { height:'', weight:'', age:'' };
+    STATE.streak = cached.streak || 0;
+    STATE.lastWorkoutDate = cached.lastWorkoutDate || null;
     renderAll();
     switchTab('tab-workout');
   }
@@ -1068,6 +1309,9 @@ async function loadState(){
     STATE.clanId = udata.clanId || null;
     STATE.plans = udata.plans || [];
     STATE.xp = udata.xp || 0;
+    STATE.stats = udata.stats || { height:'', weight:'', age:'' };
+    STATE.streak = udata.streak || 0;
+    STATE.lastWorkoutDate = udata.lastWorkoutDate || null;
     if(udata.theme) setTheme(udata.theme, true);
     if(udata.onboarded===false) startTutorial();
   }catch(e){ console.error('loadState user doc error', e); }
@@ -1084,6 +1328,7 @@ async function loadState(){
 
   persistLocalState();
   renderAll();
+  initWorkoutTab(); // re-render whichever workout sub-view (Today/Plans/History) is current, now with fresh data
   if(!document.querySelector('section.active')) switchTab('tab-workout');
   if(STATE.clanId) loadClan(); else showNoClanView();
 }
@@ -1164,6 +1409,8 @@ function renderTodayView(){
   const wd = todayWeekday();
   const todays = STATE.plans.filter(p=>p.days.includes(wd));
   let html = '';
+  if(wd===0 && !weeklyReportDismissed) html += renderWeeklyReportCard();
+  html += renderWellnessTipCard();
   if(todays.length===0){
     html += `<div class="card empty-state"><div class="icon">▲</div>No workout scheduled today<br><br><button class="btn-ghost" onclick="switchWorkoutView('plans')">Set up a workout</button></div>`;
   } else {
@@ -1178,6 +1425,60 @@ function renderTodayView(){
   }
   html += `<button class="btn-ghost" style="width:100%; margin-top:4px;" onclick="switchWorkoutView('freeform')">+ Freeform Session</button>`;
   container.innerHTML = html;
+}
+
+// ---------------- WEEKLY REPORT (Sunday home-screen recap) ----------------
+let weeklyReportDismissed = false;
+function statsInDateRange(fromInclusive, toExclusive){
+  let vol=0, sets=0, workouts=0;
+  STATE.workouts.forEach(w=>{
+    if(w.date>=fromInclusive && (!toExclusive || w.date<toExclusive)){
+      workouts++;
+      (w.exercises||[]).forEach(ex=>(ex.sets||[]).forEach(s=>{ sets++; vol += (parseFloat(s.weight)||0)*(parseFloat(s.reps)||0); }));
+    }
+  });
+  return { vol, sets, workouts };
+}
+function renderWeeklyReportCard(){
+  const today = new Date(todayStr()+'T00:00:00');
+  const d7 = new Date(today); d7.setDate(d7.getDate()-6);
+  const d14 = new Date(today); d14.setDate(d14.getDate()-13);
+  const thisStart = d7.toISOString().slice(0,10);
+  const lastStart = d14.toISOString().slice(0,10);
+  const thisWeek = statsInDateRange(thisStart, null);
+  const lastWeek = statsInDateRange(lastStart, thisStart);
+  const diff = (a,b)=> a - b;
+  const arrow = (d)=> d>0 ? '▲' : d<0 ? '▼' : '—';
+  const volDiff = diff(thisWeek.vol, lastWeek.vol);
+  return `
+    <div class="today-plan-card" style="border-color:var(--cyan);">
+      <div class="today-plan-tag" style="color:var(--cyan);">Weekly Recap</div>
+      <div class="today-plan-name">This Week vs Last</div>
+      <div class="stat-row"><span>Workouts</span><span>${thisWeek.workouts} (${arrow(diff(thisWeek.workouts,lastWeek.workouts))} ${lastWeek.workouts})</span></div>
+      <div class="stat-row"><span>Sets Logged</span><span>${thisWeek.sets} (${arrow(diff(thisWeek.sets,lastWeek.sets))} ${lastWeek.sets})</span></div>
+      <div class="stat-row"><span>Total Volume</span><span>${Math.round(thisWeek.vol).toLocaleString()} lbs (${arrow(volDiff)} ${Math.round(lastWeek.vol).toLocaleString()})</span></div>
+      <div class="stat-row"><span>Current Streak</span><span>${STATE.streak||0} day${(STATE.streak||0)!==1?'s':''}</span></div>
+      <button class="btn-ghost" style="width:100%; margin-top:12px;" onclick="weeklyReportDismissed=true; renderTodayView();">Dismiss</button>
+    </div>`;
+}
+
+// ---------------- WELLNESS TIPS (lightweight, for now) ----------------
+const WELLNESS_TIPS = [
+  'Aim for 7-9 hours of sleep tonight — recovery is when muscle actually grows, not during the workout.',
+  'Try 5 minutes of slow breathing or meditation before bed to wind down your nervous system.',
+  'A short walk between study sessions resets focus better than scrolling does.',
+  'Hydration affects mood as much as performance — a glass of water before you spiral is underrated.',
+  'Rest days aren\'t wasted days. Let your nervous system recover, not just your muscles.',
+  'Writing down two lines about today, good or bad, can lower stress more than people expect.',
+  'Consistent sleep and wake times matter more than total hours — try to keep them steady even on weekends.',
+];
+function renderWellnessTipCard(){
+  const tip = WELLNESS_TIPS[new Date().getDate() % WELLNESS_TIPS.length];
+  return `
+    <div class="card" style="border-color:var(--cyan); margin-bottom:14px;">
+      <div style="font-size:11px; letter-spacing:1px; color:var(--cyan); text-transform:uppercase; margin-bottom:6px;">Beyond the Gym</div>
+      <div style="font-size:12.5px; color:var(--dim); line-height:1.5;">${tip}</div>
+    </div>`;
 }
 
 // ---------------- PLANS (workout templates) ----------------
@@ -1420,12 +1721,15 @@ async function finishSession(){
     STATE.workouts.unshift(entry);
   }catch(e){ console.error('finishSession save error', e); }
   awardXp(bonus, 'Workout complete');
+  const streakBonus = recordStreak();
+  if(streakBonus>0) awardXp(streakBonus, STATE.streak+'-day streak');
   persistLocalState();
   activeSession = null;
   localStorage.removeItem('forge_draft_session');
   renderWorkoutHistory();
   populateExerciseSelect();
   switchWorkoutView('today');
+  showWorkoutAnalysis(entry);
 }
 
 function addExercise(){
@@ -1508,7 +1812,10 @@ async function saveWorkout(){
   populateExerciseSelect();
   persistLocalState();
   awardXp(xpEarned, 'Session logged');
+  const streakBonus = recordStreak();
+  if(streakBonus>0) awardXp(streakBonus, STATE.streak+'-day streak');
   switchWorkoutView('today');
+  showWorkoutAnalysis(entry);
 }
 
 async function deleteWorkout(id){
