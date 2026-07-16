@@ -29,6 +29,9 @@
   body[data-theme="ember"]{ --bg:#180D0A; --panel:#241512; --panel-raised:#2E1A1590; --line:#3A231C; --amber:#FF6B4A; --cyan:#FFD166; }
   body[data-theme="midnight"]{ --bg:#0D0B1A; --panel:#17142B; --panel-raised:#1D1A3590; --line:#2A2650; --amber:#B388FF; --cyan:#64D9E8; }
   body[data-theme="mono"]{ --bg:#0A0A0A; --panel:#161616; --panel-raised:#1E1E1E90; --line:#333333; --amber:#F2F2F2; --cyan:#9A9A9A; }
+  body[data-theme="blossom"]{ --bg:#1A0E14; --panel:#26151E; --panel-raised:#2E1A2590; --line:#3D2530; --amber:#FF7FA8; --cyan:#FFB3D9; }
+  body[data-theme="ocean"]{ --bg:#061420; --panel:#0D2333; --panel-raised:#122C4090; --line:#1B3A52; --amber:#3FC9E8; --cyan:#7FE8C9; }
+  body[data-theme="toxic"]{ --bg:#0A0F08; --panel:#141C10; --panel-raised:#1B270F90; --line:#2A3B1C; --amber:#C8FF4D; --cyan:#8AFF7A; }
   *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
   html,body{margin:0; padding:0; background:var(--bg); color:var(--text); font-family:'Manrope',sans-serif; height:100%; overflow-x:hidden;}
   body{ padding-bottom: env(safe-area-inset-bottom); }
@@ -591,18 +594,7 @@
           <div class="icon">⬡</div>
           <div style="font-size:13px; color:var(--dim); margin-bottom:4px;">You're not on a team yet — join one and start competing</div>
         </div>
-        <div class="card">
-          <label>Create a Clan</label>
-          <input id="clan-name-input" placeholder="Clan name">
-          <button class="btn-primary" onclick="createClan()">Create Clan</button>
-          <div id="create-clan-status" class="mono" style="font-size:11px; margin-top:8px; min-height:14px;"></div>
-        </div>
-        <div class="card">
-          <label>Join with Code</label>
-          <input id="clan-code-input" placeholder="6-character code" style="text-transform:uppercase;">
-          <button class="btn-primary" onclick="joinClan()">Join Clan</button>
-          <div id="join-clan-status" class="mono" style="font-size:11px; margin-top:8px; min-height:14px;"></div>
-        </div>
+        <div id="clan-gate-content"></div>
       </div>
 
       <div id="clan-in-clan" style="display:none;">
@@ -613,6 +605,7 @@
             <span class="code-text" id="clan-code-display">------</span>
             <button class="copy-btn" onclick="copyClanCode(this)">Copy</button>
           </div>
+          <button class="btn-ghost" style="width:100%; margin-top:10px;" onclick="copyClanInviteLink(this)">Copy Invite Link</button>
         </div>
         <h2 class="section-title">Weekly Volume Leaderboard</h2>
         <div class="card" id="clan-leaderboard"><div class="empty-state">Loading...</div></div>
@@ -683,6 +676,18 @@
         <input id="stat-weight" type="number" inputmode="decimal" placeholder="e.g. 165" onchange="saveProfileStats()">
         <label>Age</label>
         <input id="stat-age" type="number" inputmode="numeric" placeholder="e.g. 17" onchange="saveProfileStats()">
+        <label>Sex</label>
+        <select id="stat-sex" onchange="saveProfileStats()">
+          <option value="">Prefer not to say</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+        <h2 class="section-title" style="margin-top:18px;">Your Referral Code</h2>
+        <div class="code-display">
+          <span class="code-text" id="referral-code-display">------</span>
+          <button class="copy-btn" onclick="copyReferralCode(this)">Copy</button>
+        </div>
+        <div style="font-size:11px; color:var(--dim); margin-top:6px;">Share this — anyone who enters it when signing up earns you 100 XP.</div>
       </div>
 
       <div id="profile-screen-settings" style="display:none;">
@@ -723,9 +728,9 @@
   </div>
 
   <div class="modal-overlay" id="profile-setup-overlay" style="align-items:center;">
-    <div class="modal-sheet" style="border-radius:18px; max-width:320px;">
+    <div class="modal-sheet" style="border-radius:18px; max-width:320px; max-height:85vh; overflow-y:auto;">
       <div class="modal-title" style="margin-bottom:4px;">One quick thing</div>
-      <div style="font-size:12.5px; color:var(--dim); margin-bottom:16px;">Tell us a bit about yourself to personalize FORGE.</div>
+      <div style="font-size:12.5px; color:var(--dim); margin-bottom:16px;">Tell us a bit about yourself to personalize FORGE — this also sets your nutrition targets automatically.</div>
       <label>Name</label>
       <input id="setup-name" placeholder="Your name">
       <div id="setup-status" class="mono" style="font-size:11px; color:var(--red); margin:-6px 0 8px 0; min-height:14px;"></div>
@@ -735,6 +740,14 @@
       <input id="setup-weight" type="number" inputmode="decimal" placeholder="e.g. 165">
       <label>Age</label>
       <input id="setup-age" type="number" inputmode="numeric" placeholder="e.g. 17">
+      <label>Sex</label>
+      <select id="setup-sex">
+        <option value="">Prefer not to say</option>
+        <option value="male">Male</option>
+        <option value="female">Female</option>
+      </select>
+      <label>Referral Code (optional)</label>
+      <input id="setup-referral" placeholder="Got a code from a friend?" style="text-transform:uppercase;">
       <button class="btn-primary" onclick="submitProfileSetup()">Continue</button>
     </div>
   </div>
@@ -901,7 +914,7 @@ auth.onAuthStateChanged(async (user) => {
     const lastUid = localStorage.getItem('forge_last_uid');
     if(lastUid && lastUid !== user.uid){
       clearLocalDrafts();
-      STATE = { workouts: [], food: [], targets: { calories: 2400, protein: 150, fat: 70, carb: 300 }, clanId: null, plans: [], xp: 0, stats: { height:'', weight:'', age:'' }, streak: 0, lastWorkoutDate: null };
+      STATE = { workouts: [], food: [], targets: { calories: 2400, protein: 150, fat: 70, carb: 300 }, clanId: null, plans: [], xp: 0, stats: { height:'', weight:'', age:'' }, streak: 0, lastWorkoutDate: null, referralCode: '' };
       currentExercises = [];
       activeSession = null;
     }
@@ -923,6 +936,13 @@ auth.onAuthStateChanged(async (user) => {
   }
 });
 
+function generateReferralCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no confusing 0/O/1/I
+  let code = '';
+  for(let i=0;i<6;i++) code += chars[Math.floor(Math.random()*chars.length)];
+  return code;
+}
+
 async function ensureUserDoc(){
   const ref = db.collection('users').doc(currentUser.uid);
   try{
@@ -941,6 +961,7 @@ async function ensureUserDoc(){
         stats: { height:'', weight:'', age:'' },
         streak: 0,
         lastWorkoutDate: null,
+        referralCode: generateReferralCode(),
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       }), 30000, 'Create account');
       sendWelcomeEmail(); // fire-and-forget — needs the Trigger Email extension, see setup notes
@@ -948,6 +969,43 @@ async function ensureUserDoc(){
     }
     return false;
   }catch(e){ console.error('ensureUserDoc error', e); return false; }
+}
+
+// Looks up who owns a referral code and files a pending-bonus record for them —
+// can't write XP directly to another user's doc (security rules only allow self-writes),
+// so the referrer claims it themselves the next time they load the app.
+async function applyReferralCode(code){
+  try{
+    const q = await withTimeout(db.collection('users').where('referralCode','==',code).limit(1).get(), 15000, 'Look up referral code');
+    if(q.empty) return;
+    const referrerDoc = q.docs[0];
+    if(referrerDoc.id === currentUser.uid) return; // can't refer yourself
+    await withTimeout(db.collection('referrals').add({
+      referrerUid: referrerDoc.id,
+      newUserUid: currentUser.uid,
+      newUserName: currentUser.displayName || 'Athlete',
+      claimed: false,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }), 15000, 'Record referral');
+  }catch(e){ console.error('applyReferralCode error', e); }
+}
+
+// Called on every load — claims any XP owed to this user from people who signed up
+// with their referral code. Each user only ever writes their own doc, staying rules-compliant.
+async function claimReferralBonuses(){
+  if(!currentUser) return;
+  try{
+    const q = await withTimeout(db.collection('referrals').where('referrerUid','==',currentUser.uid).where('claimed','==',false).get(), 15000, 'Check referrals');
+    if(q.empty) return;
+    let totalBonus = 0;
+    const updates = [];
+    q.docs.forEach(doc=>{
+      totalBonus += 100;
+      updates.push(doc.ref.update({ claimed: true }));
+    });
+    await Promise.all(updates);
+    if(totalBonus > 0) awardXp(totalBonus, q.docs.length===1 ? 'Referral bonus' : q.docs.length+' referral bonuses');
+  }catch(e){ console.error('claimReferralBonuses error', e); }
 }
 
 // Calls a small serverless endpoint (Vercel) that sends the email via Resend.
@@ -974,6 +1032,7 @@ let STATE = {
   stats: { height:'', weight:'', age:'' },
   streak: 0,
   lastWorkoutDate: null,
+  referralCode: '',
 };
 
 // ---------------- LOCAL PERSISTENCE (autosave everything, even offline) ----------------
@@ -994,6 +1053,11 @@ function persistLocalState(){
   });
 }
 function genId(){ return Date.now().toString() + Math.floor(Math.random()*10000); }
+// Some exercises track duration instead of weight/reps (cardio, holds) — this checks
+// either shape so filters don't need to know which kind of set they're looking at.
+function setHasData(s){
+  return (s.weight && s.weight!=='') || (s.reps && s.reps!=='') || (s.duration && s.duration!=='');
+}
 
 let currentExercises = loadDraft('forge_draft_builder', []); // freeform workout builder
 let activeSession = loadDraft('forge_draft_session', null);  // in-progress structured session
@@ -1097,8 +1161,14 @@ const THEMES = [
   {id:'ember', name:'Ember', c1:'#FF6B4A', c2:'#FFD166'},
   {id:'midnight', name:'Midnight', c1:'#B388FF', c2:'#64D9E8'},
   {id:'mono', name:'Mono', c1:'#F2F2F2', c2:'#9A9A9A'},
+  {id:'blossom', name:'Blossom', c1:'#FF7FA8', c2:'#FFB3D9'},
+  {id:'ocean', name:'Ocean', c1:'#3FC9E8', c2:'#7FE8C9'},
+  {id:'toxic', name:'Toxic', c1:'#C8FF4D', c2:'#8AFF7A'},
 ];
 let currentTheme = loadDraft('forge_theme', 'forge');
+// If someone opened an invite link (?join=CODE), remember it so we can prefill/auto-navigate once logged in
+let pendingJoinCode = new URLSearchParams(window.location.search).get('join');
+if(pendingJoinCode) pendingJoinCode = pendingJoinCode.trim().toUpperCase();
 document.body.dataset.theme = currentTheme;
 function renderThemePicker(){
   const c = document.getElementById('theme-picker');
@@ -1127,6 +1197,8 @@ function openProfileModal(defaultScreen){
   document.getElementById('stat-height').value = stats.height || '';
   document.getElementById('stat-weight').value = stats.weight || '';
   document.getElementById('stat-age').value = stats.age || '';
+  document.getElementById('stat-sex').value = stats.sex || '';
+  document.getElementById('referral-code-display').textContent = STATE.referralCode || '------';
   switchProfileScreen(defaultScreen || 'stats');
   renderThemePicker();
   document.getElementById('profile-modal-overlay').classList.add('open');
@@ -1158,7 +1230,8 @@ async function saveProfileStats(){
   STATE.stats = {
     height: document.getElementById('stat-height').value,
     weight: document.getElementById('stat-weight').value,
-    age: document.getElementById('stat-age').value
+    age: document.getElementById('stat-age').value,
+    sex: document.getElementById('stat-sex').value
   };
   persistLocalState();
   if(currentUser){
@@ -1248,8 +1321,6 @@ function closeCoachModal(){
 
 // ---------------- MANDATORY PROFILE SETUP (email/phone signups only — Google already gives us a name/photo) ----------------
 function openProfileSetup(){
-  const provider = currentUser.providerData[0] && currentUser.providerData[0].providerId;
-  if(provider === 'google.com'){ startTutorial(); return; }
   document.getElementById('setup-name').value = currentUser.displayName || '';
   document.getElementById('profile-setup-overlay').classList.add('open');
 }
@@ -1259,13 +1330,26 @@ async function submitProfileSetup(){
   const height = document.getElementById('setup-height').value;
   const weight = document.getElementById('setup-weight').value;
   const age = document.getElementById('setup-age').value;
-  STATE.stats = { height, weight, age };
+  const sex = document.getElementById('setup-sex').value;
+  const referralCode = document.getElementById('setup-referral').value.trim().toUpperCase();
+  STATE.stats = { height, weight, age, sex };
+
+  // Auto-generate protein/fat targets from bodyweight (1g/lb protein, 0.3g/lb fat) —
+  // leaves calories/carbs at the existing defaults, which the person can still adjust later.
+  const w = parseFloat(weight);
+  if(w > 0){
+    STATE.targets.protein = Math.round(w * 1);
+    STATE.targets.fat = Math.round(w * 0.3);
+  }
+
   document.getElementById('user-name-label').textContent = name.split(' ')[0];
   try{
-    await db.collection('users').doc(currentUser.uid).update({ displayName: name, stats: STATE.stats });
+    await db.collection('users').doc(currentUser.uid).update({ displayName: name, stats: STATE.stats, targets: STATE.targets });
     await currentUser.updateProfile({ displayName: name });
   }catch(e){ console.error('submitProfileSetup error', e); }
+  if(referralCode) applyReferralCode(referralCode);
   persistLocalState();
+  renderAll();
   document.getElementById('profile-setup-overlay').classList.remove('open');
   startTutorial();
 }
@@ -1387,6 +1471,7 @@ async function loadState(){
     STATE.stats = udata.stats || { height:'', weight:'', age:'' };
     STATE.streak = udata.streak || 0;
     STATE.lastWorkoutDate = udata.lastWorkoutDate || null;
+    STATE.referralCode = udata.referralCode || '';
     if(udata.theme) setTheme(udata.theme, true);
     if(udata.onboarded===false) startTutorial();
   }catch(e){ console.error('loadState user doc error', e); }
@@ -1405,7 +1490,10 @@ async function loadState(){
   renderAll();
   initWorkoutTab(); // re-render whichever workout sub-view (Today/Plans/History) is current, now with fresh data
   if(!document.querySelector('section.active')) switchTab('tab-workout');
+  const arrivedViaInvite = !!pendingJoinCode && !STATE.clanId;
   if(STATE.clanId) loadClan(); else showNoClanView();
+  claimReferralBonuses();
+  if(arrivedViaInvite) switchTab('tab-clan'); // arrived via an invite link — take them straight there
 }
 
 function switchTab(id){
@@ -1485,18 +1573,29 @@ function renderTodayView(){
   const todays = STATE.plans.filter(p=>p.days.includes(wd));
   let html = '';
   if(wd===0 && !weeklyReportDismissed) html += renderWeeklyReportCard();
-  html += renderWellnessTipCard();
   if(todays.length===0){
     html += `<div class="card empty-state"><div class="icon">▲</div>No workout scheduled today<br><br><button class="btn-ghost" onclick="switchWorkoutView('plans')">Set up a workout</button></div>`;
   } else {
-    html += todays.map(p=>`
+    const todayDateStr = todayStr();
+    html += todays.map(p=>{
+      const completedToday = STATE.workouts.some(w => w.planId===p.id && w.date===todayDateStr);
+      if(completedToday){
+        return `
+        <div class="today-plan-card" style="opacity:0.5; border-color:var(--line);">
+          <div class="today-plan-tag" style="color:var(--dimmer);">✓ Completed Today</div>
+          <div class="today-plan-name">${escapeHtml(p.name)}</div>
+          <div class="today-plan-sub">${p.exercises.length} exercise${p.exercises.length!==1?'s':''}</div>
+        </div>`;
+      }
+      return `
       <div class="today-plan-card">
         <div class="today-plan-tag">Scheduled Today</div>
         <div class="today-plan-name">${escapeHtml(p.name)}</div>
         <div class="today-plan-sub">${p.exercises.length} exercise${p.exercises.length!==1?'s':''}</div>
         <button class="btn-primary" onclick="startSession('${p.id}')">Start Workout</button>
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
   html += `<button class="btn-ghost" style="width:100%; margin-top:4px;" onclick="switchWorkoutView('freeform')">+ Freeform Session</button>`;
   container.innerHTML = html;
@@ -1534,25 +1633,6 @@ function renderWeeklyReportCard(){
       <div class="stat-row"><span>Total Volume</span><span>${Math.round(thisWeek.vol).toLocaleString()} lbs (${arrow(volDiff)} ${Math.round(lastWeek.vol).toLocaleString()})</span></div>
       <div class="stat-row"><span>Current Streak</span><span>${STATE.streak||0} day${(STATE.streak||0)!==1?'s':''}</span></div>
       <button class="btn-ghost" style="width:100%; margin-top:12px;" onclick="weeklyReportDismissed=true; renderTodayView();">Dismiss</button>
-    </div>`;
-}
-
-// ---------------- WELLNESS TIPS (lightweight, for now) ----------------
-const WELLNESS_TIPS = [
-  'Aim for 7-9 hours of sleep tonight — recovery is when muscle actually grows, not during the workout.',
-  'Try 5 minutes of slow breathing or meditation before bed to wind down your nervous system.',
-  'A short walk between study sessions resets focus better than scrolling does.',
-  'Hydration affects mood as much as performance — a glass of water before you spiral is underrated.',
-  'Rest days aren\'t wasted days. Let your nervous system recover, not just your muscles.',
-  'Writing down two lines about today, good or bad, can lower stress more than people expect.',
-  'Consistent sleep and wake times matter more than total hours — try to keep them steady even on weekends.',
-];
-function renderWellnessTipCard(){
-  const tip = WELLNESS_TIPS[new Date().getDate() % WELLNESS_TIPS.length];
-  return `
-    <div class="card" style="border-color:var(--cyan); margin-bottom:14px;">
-      <div style="font-size:11px; letter-spacing:1px; color:var(--cyan); text-transform:uppercase; margin-bottom:6px;">Beyond the Gym</div>
-      <div style="font-size:12.5px; color:var(--dim); line-height:1.5;">${tip}</div>
     </div>`;
 }
 
@@ -1634,10 +1714,10 @@ function renderPlanDetail(){
       <div class="plan-ex-info">
         <div class="plan-ex-name">${escapeHtml(ex.name)}</div>
         <div class="plan-ex-targets">
-          <input type="number" value="${ex.targetSets}" onchange="updatePlanExTarget(${idx},'targetSets',this.value)" title="sets">
-          <span style="color:var(--dim); font-size:11px; align-self:center;">sets ×</span>
-          <input type="text" value="${escapeHtml(String(ex.targetReps))}" onchange="updatePlanExTarget(${idx},'targetReps',this.value)" title="reps" style="width:56px;">
-          <span style="color:var(--dim); font-size:11px; align-self:center;">reps</span>
+          <input type="number" value="${ex.targetSets}" onchange="updatePlanExTarget(${idx},'targetSets',this.value)" title="${ex.unit==='time'?'rounds':'sets'}">
+          <span style="color:var(--dim); font-size:11px; align-self:center;">${ex.unit==='time'?'rounds ×':'sets ×'}</span>
+          <input type="text" value="${escapeHtml(String(ex.targetReps))}" onchange="updatePlanExTarget(${idx},'targetReps',this.value)" title="${ex.unit==='time'?'duration':'reps'}" style="width:56px;">
+          <span style="color:var(--dim); font-size:11px; align-self:center;">${ex.unit==='time'?'duration':'reps'}</span>
         </div>
       </div>
       <button class="remove-ex" onclick="removePlanExercise(${idx})">remove</button>
@@ -1675,7 +1755,7 @@ function addExerciseToPlan(exId){
   const plan = getPlan(planEditId);
   const ex = EXDB.find(e=>e.id===exId);
   if(!plan || !ex) return;
-  plan.exercises.push({ exId: ex.id, name: ex.name, targetSets: ex.sets, targetReps: ex.reps });
+  plan.exercises.push({ exId: ex.id, name: ex.name, unit: ex.unit||'reps', targetSets: ex.sets, targetReps: ex.reps });
   savePlansToFirestore();
   showToast('+ '+ex.name+' added to '+plan.name);
 }
@@ -1722,8 +1802,10 @@ function startSession(planId){
     startedAt: Date.now(),
     xpEarned: 0,
     exercises: plan.exercises.map(ex=>({
-      exId: ex.exId, name: ex.name,
-      sets: Array.from({length: ex.targetSets||3}, ()=>({ weight:'', reps: String(ex.targetReps||'').split('-')[0].replace(/\D/g,'')||'', done:false })),
+      exId: ex.exId, name: ex.name, unit: ex.unit||'reps',
+      sets: Array.from({length: ex.targetSets||3}, ()=> ex.unit==='time'
+        ? { duration: String(ex.targetReps||''), done:false }
+        : { weight:'', reps: String(ex.targetReps||'').split('-')[0].replace(/\D/g,'')||'', done:false }),
       bonusAwarded: false
     }))
   };
@@ -1745,7 +1827,14 @@ function renderActiveSession(){
           <button class="session-set-del" onclick="removeSessionExercise(${exIdx})" title="Remove exercise">×</button>
         </div>
       </div>
-      ${ex.sets.map((s,setIdx)=>`
+      ${ex.sets.map((s,setIdx)=> ex.unit==='time' ? `
+        <div class="session-set-row" style="grid-template-columns: 22px 26px 1fr 22px;">
+          <div class="set-num">${setIdx+1}</div>
+          <button class="set-checkbox ${s.done?'checked':''}" onclick="toggleSetDone(${exIdx},${setIdx})">${s.done?'✓':''}</button>
+          <input type="text" placeholder="e.g. 20 min or 45s" value="${s.duration||''}" onchange="updateSessionSet(${exIdx},${setIdx},'duration',this.value)">
+          <button class="session-set-del" onclick="removeSessionSet(${exIdx},${setIdx})">×</button>
+        </div>
+      ` : `
         <div class="session-set-row">
           <div class="set-num">${setIdx+1}</div>
           <button class="set-checkbox ${s.done?'checked':''}" onclick="toggleSetDone(${exIdx},${setIdx})">${s.done?'✓':''}</button>
@@ -1754,7 +1843,7 @@ function renderActiveSession(){
           <button class="session-set-del" onclick="removeSessionSet(${exIdx},${setIdx})">×</button>
         </div>
       `).join('')}
-      <button class="btn-add-set" onclick="addSessionSet(${exIdx})">+ Add Set</button>
+      <button class="btn-add-set" onclick="addSessionSet(${exIdx})">+ Add ${ex.unit==='time'?'Round':'Set'}</button>
     </div>
   `;
   }).join('');
@@ -1767,7 +1856,8 @@ function updateSessionSet(exIdx, setIdx, field, val){
   saveDraft('forge_draft_session', activeSession);
 }
 function addSessionSet(exIdx){
-  activeSession.exercises[exIdx].sets.push({weight:'', reps:'', done:false});
+  const ex = activeSession.exercises[exIdx];
+  ex.sets.push(ex.unit==='time' ? {duration:'', done:false} : {weight:'', reps:'', done:false});
   saveDraft('forge_draft_session', activeSession);
   renderActiveSession();
 }
@@ -1821,7 +1911,7 @@ function toggleSetDone(exIdx, setIdx){
 async function finishSession(){
   if(!activeSession) return;
   const loggedExercises = activeSession.exercises
-    .map(ex=>({ name: ex.name, exId: ex.exId, sets: ex.sets.filter(s=>s.weight!=='' || s.reps!=='').map(s=>({weight:s.weight, reps:s.reps, done:s.done})) }))
+    .map(ex=>({ name: ex.name, exId: ex.exId, unit: ex.unit||'reps', sets: ex.sets.filter(setHasData).map(s=> ex.unit==='time' ? {duration:s.duration, done:s.done} : {weight:s.weight, reps:s.reps, done:s.done}) }))
     .filter(ex=>ex.sets.length>0);
   if(loggedExercises.length===0){
     if(!(await showConfirm('No sets logged yet — finish anyway and discard this session?'))) return;
@@ -1864,7 +1954,8 @@ function removeExercise(idx){
   renderExerciseBuilder();
 }
 function addSet(exIdx){
-  currentExercises[exIdx].sets.push({weight:'', reps:''});
+  const ex = currentExercises[exIdx];
+  ex.sets.push(ex.unit==='time' ? {duration:''} : {weight:'', reps:''});
   saveDraft('forge_draft_builder', currentExercises);
   renderExerciseBuilder();
 }
@@ -1892,7 +1983,14 @@ function renderExerciseBuilder(){
         <strong>${escapeHtml(ex.name)}</strong>
         <button class="remove-ex" onclick="removeExercise(${exIdx})">remove</button>
       </div>
-      ${ex.sets.map((s, setIdx) => `
+      ${ex.sets.map((s, setIdx) => ex.unit==='time' ? `
+        <div class="set-row" style="grid-template-columns: 24px 1fr 30px;">
+          <div class="set-num">${setIdx+1}</div>
+          <input type="text" placeholder="e.g. 20 min or 45s" value="${s.duration||''}"
+            onchange="updateSetField(${exIdx},${setIdx},'duration',this.value)">
+          <button class="set-del" onclick="removeSet(${exIdx},${setIdx})">×</button>
+        </div>
+      ` : `
         <div class="set-row">
           <div class="set-num">${setIdx+1}</div>
           <input type="number" inputmode="decimal" placeholder="lbs" value="${s.weight}"
@@ -1902,7 +2000,7 @@ function renderExerciseBuilder(){
           <button class="set-del" onclick="removeSet(${exIdx},${setIdx})">×</button>
         </div>
       `).join('')}
-      <button class="btn-add-set" onclick="addSet(${exIdx})">+ Add Set</button>
+      <button class="btn-add-set" onclick="addSet(${exIdx})">+ Add ${ex.unit==='time'?'Round':'Set'}</button>
     </div>
   `).join('');
 }
@@ -1935,8 +2033,8 @@ async function saveWorkout(){
   if(currentExercises.length===0) return;
   const dayType = document.getElementById('day-type').value;
   const exercises = currentExercises
-    .filter(ex => ex.sets.some(s=>s.weight!=='' || s.reps!==''))
-    .map(ex => ({ name: ex.name, exId: ex.exId||null, sets: ex.sets.filter(s=>s.weight!=='' || s.reps!=='') }));
+    .filter(ex => ex.sets.some(setHasData))
+    .map(ex => ({ name: ex.name, exId: ex.exId||null, unit: ex.unit||'reps', sets: ex.sets.filter(setHasData) }));
   if(exercises.length===0) return;
   let setCount = 0;
   exercises.forEach(ex => setCount += ex.sets.length);
@@ -2156,17 +2254,63 @@ function genClanCode(){
   return code;
 }
 
+const CLAN_CREATE_RANK_INDEX = 6; // Beast — 7th rank
+const CLAN_JOIN_RANK_INDEX = 2;   // Grinder — 3rd rank
+
 function showNoClanView(){
   document.getElementById('clan-no-clan').style.display = 'block';
   document.getElementById('clan-in-clan').style.display = 'none';
+  renderClanGateContent();
 }
 function showInClanView(){
   document.getElementById('clan-no-clan').style.display = 'none';
   document.getElementById('clan-in-clan').style.display = 'block';
 }
 
+function renderClanGateContent(){
+  const el = document.getElementById('clan-gate-content');
+  if(!el) return;
+  const createRank = RANKS[CLAN_CREATE_RANK_INDEX];
+  const joinRank = RANKS[CLAN_JOIN_RANK_INDEX];
+  const canCreate = STATE.xp >= createRank.min;
+  const canJoin = STATE.xp >= joinRank.min;
+
+  el.innerHTML = `
+    <div class="card">
+      <label>Create a Clan</label>
+      ${canCreate ? `
+        <input id="clan-name-input" placeholder="Clan name">
+        <button class="btn-primary" onclick="createClan()">Create Clan</button>
+        <div id="create-clan-status" class="mono" style="font-size:11px; margin-top:8px; min-height:14px;"></div>
+      ` : `
+        <div class="empty-state" style="padding:20px 10px;">
+          <div class="icon">🔒</div>
+          Reach <strong style="color:var(--text);">${createRank.name}</strong> rank (${createRank.min.toLocaleString()} XP) to create a clan.<br>
+          <span class="mono" style="font-size:11px; color:var(--dimmer);">${STATE.xp.toLocaleString()} / ${createRank.min.toLocaleString()} XP</span>
+        </div>
+      `}
+    </div>
+    <div class="card">
+      <label>Join with Code</label>
+      ${canJoin ? `
+        <input id="clan-code-input" placeholder="6-character code" style="text-transform:uppercase;" value="${pendingJoinCode||''}">
+        <button class="btn-primary" onclick="joinClan()">Join Clan</button>
+        <div id="join-clan-status" class="mono" style="font-size:11px; margin-top:8px; min-height:14px;"></div>
+      ` : `
+        <div class="empty-state" style="padding:20px 10px;">
+          <div class="icon">🔒</div>
+          Reach <strong style="color:var(--text);">${joinRank.name}</strong> rank (${joinRank.min.toLocaleString()} XP) to join a clan.<br>
+          <span class="mono" style="font-size:11px; color:var(--dimmer);">${STATE.xp.toLocaleString()} / ${joinRank.min.toLocaleString()} XP</span>
+        </div>
+      `}
+    </div>
+  `;
+  pendingJoinCode = null; // one-time prefill
+}
+
 async function createClan(){
   const statusEl = document.getElementById('create-clan-status');
+  if(STATE.xp < RANKS[CLAN_CREATE_RANK_INDEX].min) return; // gated — button shouldn't even be visible, but double-check
   const name = document.getElementById('clan-name-input').value.trim();
   if(!name){ statusEl.style.color = 'var(--red)'; statusEl.textContent = 'Enter a clan name first.'; return; }
   statusEl.style.color = 'var(--dim)'; statusEl.textContent = 'Creating...';
@@ -2192,9 +2336,10 @@ async function createClan(){
   }
 }
 
-async function joinClan(){
+async function joinClan(codeOverride){
   const statusEl = document.getElementById('join-clan-status');
-  const code = document.getElementById('clan-code-input').value.trim().toUpperCase();
+  if(STATE.xp < RANKS[CLAN_JOIN_RANK_INDEX].min) return; // gated — double-check even though the button shouldn't be visible
+  const code = (codeOverride || document.getElementById('clan-code-input').value).trim().toUpperCase();
   if(!code){ statusEl.style.color = 'var(--red)'; statusEl.textContent = 'Enter a clan code first.'; return; }
   statusEl.style.color = 'var(--dim)'; statusEl.textContent = 'Looking for that clan...';
   try{
@@ -2234,6 +2379,23 @@ async function leaveClan(){
   }
 }
 
+function copyReferralCode(btn){
+  const code = document.getElementById('referral-code-display').textContent;
+  const orig = btn.textContent;
+  const flash = ()=>{ btn.textContent = 'Copied!'; setTimeout(()=>{ btn.textContent = orig; }, 1500); };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(code).then(flash).catch(()=>{
+      const ta = document.createElement('textarea');
+      ta.value = code; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select();
+      try{ document.execCommand('copy'); }catch(e){}
+      document.body.removeChild(ta);
+      flash();
+    });
+  } else {
+    flash();
+  }
+}
 function copyClanCode(btn){
   const code = document.getElementById('clan-code-display').textContent;
   const orig = btn.textContent;
@@ -2243,6 +2405,24 @@ function copyClanCode(btn){
       // fallback for browsers that block clipboard API
       const ta = document.createElement('textarea');
       ta.value = code; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select();
+      try{ document.execCommand('copy'); }catch(e){}
+      document.body.removeChild(ta);
+      flash();
+    });
+  } else {
+    flash();
+  }
+}
+function copyClanInviteLink(btn){
+  const code = document.getElementById('clan-code-display').textContent;
+  const link = window.location.origin + window.location.pathname + '?join=' + code;
+  const orig = btn.textContent;
+  const flash = ()=>{ btn.textContent = 'Copied!'; setTimeout(()=>{ btn.textContent = orig; }, 1500); };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(link).then(flash).catch(()=>{
+      const ta = document.createElement('textarea');
+      ta.value = link; ta.style.position='fixed'; ta.style.opacity='0';
       document.body.appendChild(ta); ta.select();
       try{ document.execCommand('copy'); }catch(e){}
       document.body.removeChild(ta);
@@ -2650,16 +2830,16 @@ const EXDB = [
   {id:'ab_rollout', name:'Ab Wheel Rollout', full:'Ab Wheel Rollout', cat:'Core', pattern:'crunch', direct:['Rectus Abdominis'], indirect:['Lats','Core'], sets:3, reps:'8-12'},
   {id:'leg_raise', name:'Leg Raise', full:'Hanging / Lying Leg Raise', cat:'Core', pattern:'leg_raise', direct:['Lower Abs'], indirect:['Hip Flexors','Obliques'], sets:3, reps:'12-15'},
   {id:'hanging_knee_raise', name:'Hanging Knee Raise', full:'Hanging Knee Raise', cat:'Core', pattern:'leg_raise', direct:['Lower Abs'], indirect:['Hip Flexors'], sets:3, reps:'12-15'},
-  {id:'plank', name:'Plank', full:'Standard Forearm Plank', cat:'Core', pattern:'plank', direct:['Rectus Abdominis','Core'], indirect:['Shoulders'], sets:3, reps:'30-60s'},
-  {id:'side_plank', name:'Side Plank', full:'Side Plank', cat:'Core', pattern:'plank', direct:['Obliques'], indirect:['Core'], sets:3, reps:'20-40s /side'},
+  {id:'plank', name:'Plank', full:'Standard Forearm Plank', cat:'Core', pattern:'plank', direct:['Rectus Abdominis','Core'], indirect:['Shoulders'], sets:3, reps:'30-60s', unit:'time'},
+  {id:'side_plank', name:'Side Plank', full:'Side Plank', cat:'Core', pattern:'plank', direct:['Obliques'], indirect:['Core'], sets:3, reps:'20-40s /side', unit:'time'},
   {id:'russian_twist', name:'Russian Twist', full:'Weighted Russian Twist', cat:'Core', pattern:'crunch', direct:['Obliques'], indirect:['Rectus Abdominis'], sets:3, reps:'15-20 /side'},
   {id:'woodchopper', name:'Woodchopper', full:'Cable Woodchopper', cat:'Core', pattern:'crunch', direct:['Obliques'], indirect:['Core'], sets:3, reps:'12-15 /side'},
-  {id:'treadmill', name:'Treadmill Run', full:'Treadmill Running', cat:'Cardio', pattern:'cardio', direct:['Cardiovascular'], indirect:['Quads','Calves'], sets:1, reps:'15-30 min'},
-  {id:'row_machine', name:'Rowing Machine', full:'Rowing Ergometer', cat:'Cardio', pattern:'row', direct:['Cardiovascular'], indirect:['Lats','Legs'], sets:1, reps:'10-20 min'},
-  {id:'stairmaster', name:'Stairmaster', full:'Stairmaster Climb', cat:'Cardio', pattern:'cardio', direct:['Cardiovascular'], indirect:['Glutes','Calves'], sets:1, reps:'10-20 min'},
-  {id:'jump_rope', name:'Jump Rope', full:'Jump Rope', cat:'Cardio', pattern:'cardio', direct:['Cardiovascular'], indirect:['Calves'], sets:1, reps:'5-10 min'},
-  {id:'battle_ropes', name:'Battle Ropes', full:'Battle Rope Waves', cat:'Cardio', pattern:'cardio', direct:['Cardiovascular'], indirect:['Shoulders','Core'], sets:1, reps:'30-45s'},
-  {id:'farmers_carry', name:'Farmer\'s Carry', full:'Farmer\'s Walk', cat:'Full Body', pattern:'carry', direct:['Grip','Traps'], indirect:['Core','Legs'], sets:3, reps:'30-40m'},
+  {id:'treadmill', name:'Treadmill Run', full:'Treadmill Running', cat:'Cardio', pattern:'cardio', direct:['Cardiovascular'], indirect:['Quads','Calves'], sets:1, reps:'15-30 min', unit:'time'},
+  {id:'row_machine', name:'Rowing Machine', full:'Rowing Ergometer', cat:'Cardio', pattern:'row', direct:['Cardiovascular'], indirect:['Lats','Legs'], sets:1, reps:'10-20 min', unit:'time'},
+  {id:'stairmaster', name:'Stairmaster', full:'Stairmaster Climb', cat:'Cardio', pattern:'cardio', direct:['Cardiovascular'], indirect:['Glutes','Calves'], sets:1, reps:'10-20 min', unit:'time'},
+  {id:'jump_rope', name:'Jump Rope', full:'Jump Rope', cat:'Cardio', pattern:'cardio', direct:['Cardiovascular'], indirect:['Calves'], sets:1, reps:'5-10 min', unit:'time'},
+  {id:'battle_ropes', name:'Battle Ropes', full:'Battle Rope Waves', cat:'Cardio', pattern:'cardio', direct:['Cardiovascular'], indirect:['Shoulders','Core'], sets:1, reps:'30-45s', unit:'time'},
+  {id:'farmers_carry', name:'Farmer\'s Carry', full:'Farmer\'s Walk', cat:'Full Body', pattern:'carry', direct:['Grip','Traps'], indirect:['Core','Legs'], sets:3, reps:'30-40m', unit:'time'},
 ];
 
 let exFilterCat = 'All';
@@ -2717,8 +2897,12 @@ function quickAddExercise(exId){
     return;
   }
   const sets = [];
-  for(let i=0;i<ex.sets;i++) sets.push({weight:'', reps: ex.reps.split('-')[0].replace(/\D/g,'') || '', done:false});
-  currentExercises.push({ name: ex.name, exId: ex.id, sets });
+  if(ex.unit==='time'){
+    for(let i=0;i<ex.sets;i++) sets.push({duration:'', done:false});
+  } else {
+    for(let i=0;i<ex.sets;i++) sets.push({weight:'', reps: ex.reps.split('-')[0].replace(/\D/g,'') || '', done:false});
+  }
+  currentExercises.push({ name: ex.name, exId: ex.id, unit: ex.unit||'reps', sets });
   saveDraft('forge_draft_builder', currentExercises);
   showToast('+ '+ex.name+' added to session');
 }
@@ -2758,8 +2942,12 @@ function quickAddExerciseFromModal(exId){
   const ex = EXDB.find(e=>e.id===exId);
   if(!ex) return;
   const sets = [];
-  for(let i=0;i<ex.sets;i++) sets.push({weight:'', reps: ex.reps.split('-')[0].replace(/\D/g,'') || ''});
-  currentExercises.push({ name: ex.name, exId: ex.id, sets });
+  if(ex.unit==='time'){
+    for(let i=0;i<ex.sets;i++) sets.push({duration:'', done:false});
+  } else {
+    for(let i=0;i<ex.sets;i++) sets.push({weight:'', reps: ex.reps.split('-')[0].replace(/\D/g,'') || ''});
+  }
+  currentExercises.push({ name: ex.name, exId: ex.id, unit: ex.unit||'reps', sets });
   saveDraft('forge_draft_builder', currentExercises);
   showToast('+ '+ex.name+' added to session');
 }
