@@ -681,9 +681,9 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 // Some networks (school/corporate firewalls, some VPNs, some ad blockers) block Firestore's
-// default streaming connection while still allowing normal HTTPS through. This detects that
-// and falls back to long-polling instead, which works almost everywhere.
-db.settings({ experimentalAutoDetectLongPolling: true });
+// default streaming connection while still allowing normal HTTPS through. Force long-polling
+// unconditionally (skip auto-detection, which isn't reliably triggering on some networks).
+db.settings({ experimentalForceLongPolling: true, merge: true });
 const googleProvider = new firebase.auth.GoogleAuthProvider();
 let currentUser = null;
 
