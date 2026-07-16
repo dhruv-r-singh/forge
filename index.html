@@ -1336,13 +1336,15 @@ async function submitLinkEmail(){
   try{
     const cred = firebase.auth.EmailAuthProvider.credential(email, pass);
     await currentUser.linkWithCredential(cred);
-    STATE.emailVerified = false;
-    await db.collection('users').doc(currentUser.uid).update({ email, emailVerified: false });
+    // Already trusted via Google? Don't make them verify again — Google already confirmed they own an email.
+    const alreadyGoogleVerified = currentUser.providerData.some(p=>p.providerId==='google.com');
+    STATE.emailVerified = alreadyGoogleVerified;
+    await db.collection('users').doc(currentUser.uid).update({ email, emailVerified: alreadyGoogleVerified });
     statusEl.style.color = 'var(--cyan)'; statusEl.textContent = 'Email linked — you can sign in with either now.';
     document.getElementById('link-email-input').value = '';
     document.getElementById('link-email-pass-input').value = '';
     renderLinkedMethods();
-    sendVerificationCode();
+    if(!alreadyGoogleVerified) sendVerificationCode();
   }catch(e){
     console.error('link email error', e);
     statusEl.style.color = 'var(--red)';
