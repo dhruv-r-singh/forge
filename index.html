@@ -884,8 +884,15 @@ function clearLocalDrafts(){
   PER_USER_DRAFT_KEYS.forEach(k=>localStorage.removeItem(k));
 }
 
+let hasLoadedForUid = null;
 auth.onAuthStateChanged(async (user) => {
   if(user){
+    // onAuthStateChanged can fire more than once for the same signed-in user (e.g. on a
+    // token refresh) — skip re-running the whole load flow if we've already loaded this uid,
+    // so it doesn't yank the user back to the Workout tab mid-action.
+    if(hasLoadedForUid === user.uid){ currentUser = user; return; }
+    hasLoadedForUid = user.uid;
+
     // If this is a different account than last time on this device, wipe any cached/draft
     // data from the previous account so it can't bleed into the new one.
     const lastUid = localStorage.getItem('forge_last_uid');
@@ -907,6 +914,7 @@ auth.onAuthStateChanged(async (user) => {
     if(isNewUser){ openProfileSetup(); } // collect height/weight/age before the tutorial
   } else {
     currentUser = null;
+    hasLoadedForUid = null;
     document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('app').style.display = 'none';
   }
@@ -915,7 +923,7 @@ auth.onAuthStateChanged(async (user) => {
 async function ensureUserDoc(){
   const ref = db.collection('users').doc(currentUser.uid);
   try{
-    const snap = await withTimeout(ref.get(), 12000, 'Load account');
+    const snap = await withTimeout(ref.get(), 30000, 'Load account');
     if(!snap.exists){
       await withTimeout(ref.set({
         displayName: currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : 'Athlete'),
@@ -931,7 +939,7 @@ async function ensureUserDoc(){
         streak: 0,
         lastWorkoutDate: null,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      }), 12000, 'Create account');
+      }), 30000, 'Create account');
       sendWelcomeEmail(); // fire-and-forget — needs the Trigger Email extension, see setup notes
       return true;
     }
@@ -1360,11 +1368,14 @@ async function loadState(){
     STATE.streak = cached.streak || 0;
     STATE.lastWorkoutDate = cached.lastWorkoutDate || null;
     renderAll();
-    switchTab('tab-workout');
+    // Only jump to the Workout tab on a genuinely fresh load — loadState can get called
+    // again later (e.g. on an auth token refresh) and shouldn't yank the user off whatever
+    // tab they're actively using.
+    if(!document.querySelector('section.active')) switchTab('tab-workout');
   }
 
   try{
-    const userSnap = await withTimeout(db.collection('users').doc(currentUser.uid).get(), 12000, 'Load profile');
+    const userSnap = await withTimeout(db.collection('users').doc(currentUser.uid).get(), 30000, 'Load profile');
     const udata = userSnap.data() || {};
     if(udata.targets) STATE.targets = udata.targets;
     STATE.clanId = udata.clanId || null;
@@ -1378,12 +1389,12 @@ async function loadState(){
   }catch(e){ console.error('loadState user doc error', e); }
 
   try{
-    const wSnap = await withTimeout(db.collection('users').doc(currentUser.uid).collection('workouts').orderBy('date','desc').limit(100).get(), 12000, 'Load workouts');
+    const wSnap = await withTimeout(db.collection('users').doc(currentUser.uid).collection('workouts').orderBy('date','desc').limit(100).get(), 30000, 'Load workouts');
     STATE.workouts = wSnap.docs.map(d=>({id:d.id, ...d.data()}));
   }catch(e){ console.error('loadState workouts error', e); if(!cached) STATE.workouts = []; }
 
   try{
-    const fSnap = await withTimeout(db.collection('users').doc(currentUser.uid).collection('food').orderBy('date','desc').limit(200).get(), 12000, 'Load food log');
+    const fSnap = await withTimeout(db.collection('users').doc(currentUser.uid).collection('food').orderBy('date','desc').limit(200).get(), 30000, 'Load food log');
     STATE.food = fSnap.docs.map(d=>({id:d.id, ...d.data()}));
   }catch(e){ console.error('loadState food error', e); if(!cached) STATE.food = []; }
 
@@ -2163,8 +2174,8 @@ async function createClan(){
       name, code, ownerUid: currentUser.uid,
       members: { [currentUser.uid]: { displayName: currentUser.displayName || 'Athlete', photoURL: currentUser.photoURL || '' } },
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    }), 12000, 'Create clan');
-    await withTimeout(db.collection('users').doc(currentUser.uid).update({clanId: clanRef.id}), 12000, 'Update profile');
+    }), 30000, 'Create clan');
+    await withTimeout(db.collection('users').doc(currentUser.uid).update({clanId: clanRef.id}), 30000, 'Update profile');
     STATE.clanId = clanRef.id;
     persistLocalState();
     document.getElementById('clan-name-input').value = '';
@@ -2184,13 +2195,13 @@ async function joinClan(){
   if(!code){ statusEl.style.color = 'var(--red)'; statusEl.textContent = 'Enter a clan code first.'; return; }
   statusEl.style.color = 'var(--dim)'; statusEl.textContent = 'Looking for that clan...';
   try{
-    const q = await withTimeout(db.collection('clans').where('code','==',code).limit(1).get(), 12000, 'Find clan');
+    const q = await withTimeout(db.collection('clans').where('code','==',code).limit(1).get(), 30000, 'Find clan');
     if(q.empty){ statusEl.style.color = 'var(--red)'; statusEl.textContent = 'No clan found with that code.'; return; }
     const clanDoc = q.docs[0];
     await withTimeout(clanDoc.ref.update({
       [`members.${currentUser.uid}`]: { displayName: currentUser.displayName || 'Athlete', photoURL: currentUser.photoURL || '' }
-    }), 12000, 'Join clan');
-    await withTimeout(db.collection('users').doc(currentUser.uid).update({clanId: clanDoc.id}), 12000, 'Update profile');
+    }), 30000, 'Join clan');
+    await withTimeout(db.collection('users').doc(currentUser.uid).update({clanId: clanDoc.id}), 30000, 'Update profile');
     STATE.clanId = clanDoc.id;
     persistLocalState();
     document.getElementById('clan-code-input').value = '';
@@ -2455,7 +2466,7 @@ async function loadClan(){
   if(!STATE.clanId) return;
   showInClanView();
   try{
-    const clanSnap = await withTimeout(db.collection('clans').doc(STATE.clanId).get(), 12000, 'Load clan');
+    const clanSnap = await withTimeout(db.collection('clans').doc(STATE.clanId).get(), 30000, 'Load clan');
     if(!clanSnap.exists){ STATE.clanId = null; showNoClanView(); return; }
     const clan = clanSnap.data();
     document.getElementById('clan-title-header').textContent = clan.name;
@@ -2467,7 +2478,7 @@ async function loadClan(){
       const info = clan.members[uid];
       let volume = 0, sessions = 0;
       try{
-        const wSnap = await withTimeout(db.collection('users').doc(uid).collection('workouts').where('date','>=',monday).get(), 12000, 'Load member volume');
+        const wSnap = await withTimeout(db.collection('users').doc(uid).collection('workouts').where('date','>=',monday).get(), 30000, 'Load member volume');
         sessions = wSnap.size;
         wSnap.docs.forEach(d=>{
           const w = d.data();
