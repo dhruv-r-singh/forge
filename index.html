@@ -910,9 +910,9 @@ auth.onAuthStateChanged(async (user) => {
 async function ensureUserDoc(){
   const ref = db.collection('users').doc(currentUser.uid);
   try{
-    const snap = await ref.get();
+    const snap = await withTimeout(ref.get(), 12000, 'Load account');
     if(!snap.exists){
-      await ref.set({
+      await withTimeout(ref.set({
         displayName: currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : 'Athlete'),
         photoURL: currentUser.photoURL || '',
         email: currentUser.email || '',
@@ -926,7 +926,7 @@ async function ensureUserDoc(){
         streak: 0,
         lastWorkoutDate: null,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
+      }), 12000, 'Create account');
       sendWelcomeEmail(); // fire-and-forget — needs the Trigger Email extension, see setup notes
       return true;
     }
@@ -1044,6 +1044,14 @@ function showConfirm(message){
     yesBtn.onclick = ()=>cleanup(true);
     cancelBtn.onclick = ()=>cleanup(false);
   });
+}
+// Firestore calls on a bad/blocked connection can hang forever instead of erroring —
+// this forces a visible failure after `ms` so nothing gets stuck on "Loading..." forever.
+function withTimeout(promise, ms, label){
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(()=>reject(new Error((label||'Request')+' timed out — check your connection.')), ms))
+  ]);
 }
 async function saveXpToFirestore(){
   persistLocalState();
@@ -1351,7 +1359,7 @@ async function loadState(){
   }
 
   try{
-    const userSnap = await db.collection('users').doc(currentUser.uid).get();
+    const userSnap = await withTimeout(db.collection('users').doc(currentUser.uid).get(), 12000, 'Load profile');
     const udata = userSnap.data() || {};
     if(udata.targets) STATE.targets = udata.targets;
     STATE.clanId = udata.clanId || null;
@@ -1365,12 +1373,12 @@ async function loadState(){
   }catch(e){ console.error('loadState user doc error', e); }
 
   try{
-    const wSnap = await db.collection('users').doc(currentUser.uid).collection('workouts').orderBy('date','desc').limit(100).get();
+    const wSnap = await withTimeout(db.collection('users').doc(currentUser.uid).collection('workouts').orderBy('date','desc').limit(100).get(), 12000, 'Load workouts');
     STATE.workouts = wSnap.docs.map(d=>({id:d.id, ...d.data()}));
   }catch(e){ console.error('loadState workouts error', e); if(!cached) STATE.workouts = []; }
 
   try{
-    const fSnap = await db.collection('users').doc(currentUser.uid).collection('food').orderBy('date','desc').limit(200).get();
+    const fSnap = await withTimeout(db.collection('users').doc(currentUser.uid).collection('food').orderBy('date','desc').limit(200).get(), 12000, 'Load food log');
     STATE.food = fSnap.docs.map(d=>({id:d.id, ...d.data()}));
   }catch(e){ console.error('loadState food error', e); if(!cached) STATE.food = []; }
 
@@ -2146,12 +2154,12 @@ async function createClan(){
   const code = genClanCode();
   try{
     const clanRef = db.collection('clans').doc();
-    await clanRef.set({
+    await withTimeout(clanRef.set({
       name, code, ownerUid: currentUser.uid,
       members: { [currentUser.uid]: { displayName: currentUser.displayName || 'Athlete', photoURL: currentUser.photoURL || '' } },
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    await db.collection('users').doc(currentUser.uid).update({clanId: clanRef.id});
+    }), 12000, 'Create clan');
+    await withTimeout(db.collection('users').doc(currentUser.uid).update({clanId: clanRef.id}), 12000, 'Update profile');
     STATE.clanId = clanRef.id;
     persistLocalState();
     document.getElementById('clan-name-input').value = '';
@@ -2171,13 +2179,13 @@ async function joinClan(){
   if(!code){ statusEl.style.color = 'var(--red)'; statusEl.textContent = 'Enter a clan code first.'; return; }
   statusEl.style.color = 'var(--dim)'; statusEl.textContent = 'Looking for that clan...';
   try{
-    const q = await db.collection('clans').where('code','==',code).limit(1).get();
+    const q = await withTimeout(db.collection('clans').where('code','==',code).limit(1).get(), 12000, 'Find clan');
     if(q.empty){ statusEl.style.color = 'var(--red)'; statusEl.textContent = 'No clan found with that code.'; return; }
     const clanDoc = q.docs[0];
-    await clanDoc.ref.update({
+    await withTimeout(clanDoc.ref.update({
       [`members.${currentUser.uid}`]: { displayName: currentUser.displayName || 'Athlete', photoURL: currentUser.photoURL || '' }
-    });
-    await db.collection('users').doc(currentUser.uid).update({clanId: clanDoc.id});
+    }), 12000, 'Join clan');
+    await withTimeout(db.collection('users').doc(currentUser.uid).update({clanId: clanDoc.id}), 12000, 'Update profile');
     STATE.clanId = clanDoc.id;
     persistLocalState();
     document.getElementById('clan-code-input').value = '';
@@ -2442,7 +2450,7 @@ async function loadClan(){
   if(!STATE.clanId) return;
   showInClanView();
   try{
-    const clanSnap = await db.collection('clans').doc(STATE.clanId).get();
+    const clanSnap = await withTimeout(db.collection('clans').doc(STATE.clanId).get(), 12000, 'Load clan');
     if(!clanSnap.exists){ STATE.clanId = null; showNoClanView(); return; }
     const clan = clanSnap.data();
     document.getElementById('clan-title-header').textContent = clan.name;
@@ -2454,7 +2462,7 @@ async function loadClan(){
       const info = clan.members[uid];
       let volume = 0, sessions = 0;
       try{
-        const wSnap = await db.collection('users').doc(uid).collection('workouts').where('date','>=',monday).get();
+        const wSnap = await withTimeout(db.collection('users').doc(uid).collection('workouts').where('date','>=',monday).get(), 12000, 'Load member volume');
         sessions = wSnap.size;
         wSnap.docs.forEach(d=>{
           const w = d.data();
