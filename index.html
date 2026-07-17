@@ -58,7 +58,7 @@
   }
   .hud-top{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
   .hud-date{ font-size:11px; letter-spacing:2px; color:var(--dim); text-transform:uppercase; }
-  .hud-title{ font-family:'Audiowide',sans-serif; text-transform:uppercase; font-size:16px; font-weight:400; letter-spacing:1.5px; color:var(--text); }
+  .hud-title{ font-family:'Audiowide',sans-serif; text-transform:uppercase; font-size:16px; font-weight:400; letter-spacing:1.5px; color:var(--text); text-shadow:0 0 8px #FFB45466, 0 0 2px #FFB45444; }
   .hud-title .dot{ color:var(--amber); }
   .readouts{ display:grid; grid-template-columns: repeat(4,1fr); gap:8px; }
   .readout{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:7px 6px; }
@@ -196,7 +196,7 @@
     position:fixed; inset:0; z-index:100; background: radial-gradient(circle at 50% 20%, #16203E, #0A0F1C 70%);
     display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center;
   }
-  .login-logo{ font-family:'Audiowide',sans-serif; text-transform:uppercase; font-size:36px; font-weight:400; letter-spacing:5px; margin-bottom:6px; }
+  .login-logo{ font-family:'Audiowide',sans-serif; text-transform:uppercase; font-size:36px; font-weight:400; letter-spacing:5px; margin-bottom:6px; text-shadow:0 0 16px #FFB45488, 0 0 4px #FFB45466; }
   .login-logo .dot{ color:var(--amber); }
   .login-tag{ font-size:12px; color:var(--dim); letter-spacing:2px; text-transform:uppercase; margin-bottom:40px; }
   .google-btn{
@@ -395,7 +395,8 @@
 
   <div id="auth-phone" class="auth-panel" style="display:none; width:100%; max-width:280px;">
     <div id="phone-step-number">
-      <input id="phone-input" type="tel" placeholder="+1 555 555 5555" autocomplete="tel">
+      <div style="font-size:11px; color:var(--dim); margin-bottom:6px;">🇺🇸 US numbers only (+1)</div>
+      <input id="phone-input" type="tel" placeholder="555 555 5555" autocomplete="tel">
       <button class="btn-primary" onclick="sendPhoneCode()">Send Code</button>
       <div id="recaptcha-container"></div>
     </div>
@@ -419,10 +420,11 @@
       <button class="hamburger-btn" onclick="toggleHamburgerMenu()">☰</button>
     </div>
     <div class="hamburger-menu" id="hamburger-menu">
-      <button class="hamburger-item" onclick="closeHamburgerMenu(); openProfileModal();">My Profile</button>
-      <button class="hamburger-item" onclick="closeHamburgerMenu(); openAchievementsModal();">Achievements</button>
+      <button class="hamburger-item" onclick="closeHamburgerMenu(); openReportsModal();">Reports</button>
       <button class="hamburger-item" onclick="closeHamburgerMenu(); switchTab('tab-friends');">Friends</button>
+      <button class="hamburger-item" style="color:var(--dimmer); cursor:default;" onclick="return false;">Achievements</button>
       <button class="hamburger-item" onclick="closeHamburgerMenu(); openSettingsModal();">Settings</button>
+      <button class="hamburger-item" onclick="closeHamburgerMenu(); openHelpModal();">Help</button>
       <button class="hamburger-item" style="color:var(--red); border-top:1px solid var(--line); margin-top:4px; padding-top:12px;" onclick="closeHamburgerMenu(); signOutUser();">Log Out</button>
     </div>
     <div class="hud-top">
@@ -760,7 +762,8 @@
       <div id="link-phone-form" class="card" style="display:none;">
         <label>Add Phone Sign-In</label>
         <div id="link-phone-step-number">
-          <input id="link-phone-input" type="tel" placeholder="+1 555 555 5555">
+          <div style="font-size:11px; color:var(--dim); margin-bottom:6px;">🇺🇸 US numbers only (+1)</div>
+          <input id="link-phone-input" type="tel" placeholder="555 555 5555">
           <button class="btn-primary" onclick="submitLinkPhoneSendCode()">Send Code</button>
           <div id="link-recaptcha-container"></div>
         </div>
@@ -771,10 +774,25 @@
         <div id="link-phone-status" class="mono" style="font-size:11px; margin-top:8px; min-height:14px;"></div>
       </div>
 
-      <h2 class="section-title">Help</h2>
-      <button class="btn-ghost" style="width:100%; margin-bottom:22px;" onclick="closeSettingsModal(); startTutorial();">Replay Tutorial</button>
       <h2 class="section-title">Danger Zone</h2>
       <button class="danger-btn" onclick="confirmResetProgress()">Reset All Progress</button>
+      <button class="danger-btn" style="margin-top:10px;" onclick="confirmDeleteAccount()">Delete Account</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="reports-modal-overlay" style="align-items:center;" onclick="if(event.target===this) closeReportsModal()">
+    <div class="modal-sheet" style="border-radius:18px; max-width:340px;">
+      <button class="modal-close" onclick="closeReportsModal()">×</button>
+      <div class="modal-title" style="margin-bottom:12px;">Weekly Report</div>
+      <div id="reports-modal-content"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="help-modal-overlay" style="align-items:center;" onclick="if(event.target===this) closeHelpModal()">
+    <div class="modal-sheet" style="border-radius:18px; max-width:320px;">
+      <button class="modal-close" onclick="closeHelpModal()">×</button>
+      <div class="modal-title" style="margin-bottom:14px;">Help</div>
+      <button class="btn-ghost" style="width:100%;" onclick="closeHelpModal(); startTutorial();">Replay Tutorial</button>
     </div>
   </div>
 
@@ -946,8 +964,9 @@ function ensureRecaptcha(){
   return window.recaptchaVerifier;
 }
 async function sendPhoneCode(){
-  const phone = document.getElementById('phone-input').value.trim();
-  if(!phone){ document.getElementById('login-status').textContent = 'Enter a phone number, including country code.'; return; }
+  const digits = document.getElementById('phone-input').value.replace(/\D/g,'');
+  if(digits.length !== 10){ document.getElementById('login-status').textContent = 'Enter a valid 10-digit US phone number.'; return; }
+  const phone = '+1' + digits;
   document.getElementById('login-status').textContent = 'Sending code...';
   try{
     const verifier = ensureRecaptcha();
@@ -1436,7 +1455,7 @@ function renderLinkedMethods(){
     '<div class="stat-row"><span>Google</span><span>'+(has('google.com')?'✓ Linked':'Not linked')+'</span></div>' +
     '<div class="stat-row"><span>Email</span><span>'+(has('password')?'✓ Linked':'Not linked')+(has('password')?(STATE.emailVerified?' · ✓ Verified':' · Unverified'):'')+'</span></div>' +
     '<div class="stat-row"><span>Phone</span><span>'+(has('phone')?'✓ Linked':'Not linked')+'</span></div>';
-  document.getElementById('link-email-form').style.display = has('password') ? 'none' : 'block';
+  document.getElementById('link-email-form').style.display = (has('password') || has('google.com')) ? 'none' : 'block';
   document.getElementById('link-phone-form').style.display = has('phone') ? 'none' : 'block';
   // reset any in-progress phone-link UI back to step one each time this renders
   document.getElementById('link-phone-step-number').style.display = 'block';
@@ -1479,8 +1498,9 @@ function ensureLinkRecaptcha(){
 }
 async function submitLinkPhoneSendCode(){
   const statusEl = document.getElementById('link-phone-status');
-  const phone = document.getElementById('link-phone-input').value.trim();
-  if(!phone){ statusEl.style.color = 'var(--red)'; statusEl.textContent = 'Enter a phone number, including country code.'; return; }
+  const digits = document.getElementById('link-phone-input').value.replace(/\D/g,'');
+  if(digits.length !== 10){ statusEl.style.color = 'var(--red)'; statusEl.textContent = 'Enter a valid 10-digit US phone number.'; return; }
+  const phone = '+1' + digits;
   statusEl.style.color = 'var(--dim)'; statusEl.textContent = 'Sending code...';
   try{
     const verifier = ensureLinkRecaptcha();
@@ -1924,6 +1944,60 @@ function renderWeeklyReportCard(){
       <div class="stat-row"><span>Current Streak</span><span>${STATE.streak||0} day${(STATE.streak||0)!==1?'s':''}</span></div>
       <button class="btn-ghost" style="width:100%; margin-top:12px;" onclick="weeklyReportDismissed=true; renderTodayView();">Dismiss</button>
     </div>`;
+}
+
+// ---------------- REPORTS MODAL ----------------
+function openReportsModal(){
+  const today = new Date(todayStr()+'T00:00:00');
+  const d7 = new Date(today); d7.setDate(d7.getDate()-6);
+  const d14 = new Date(today); d14.setDate(d14.getDate()-13);
+  const thisStart = d7.toISOString().slice(0,10);
+  const lastStart = d14.toISOString().slice(0,10);
+  const thisWeek = statsInDateRange(thisStart, null);
+  const lastWeek = statsInDateRange(lastStart, thisStart);
+  const diff = (a,b)=> a - b;
+  const arrow = (d)=> d>0 ? '▲' : d<0 ? '▼' : '—';
+  document.getElementById('reports-modal-content').innerHTML =
+    '<div class="stat-row"><span>Workouts</span><span>'+thisWeek.workouts+' ('+arrow(diff(thisWeek.workouts,lastWeek.workouts))+' '+lastWeek.workouts+')</span></div>' +
+    '<div class="stat-row"><span>Sets Logged</span><span>'+thisWeek.sets+' ('+arrow(diff(thisWeek.sets,lastWeek.sets))+' '+lastWeek.sets+')</span></div>' +
+    '<div class="stat-row"><span>Total Volume</span><span>'+Math.round(thisWeek.vol).toLocaleString()+' lbs ('+arrow(diff(thisWeek.vol,lastWeek.vol))+' '+Math.round(lastWeek.vol).toLocaleString()+')</span></div>' +
+    '<div class="stat-row"><span>Current Streak</span><span>'+(STATE.streak||0)+' day'+((STATE.streak||0)!==1?'s':'')+'</span></div>';
+  document.getElementById('reports-modal-overlay').classList.add('open');
+}
+function closeReportsModal(){
+  document.getElementById('reports-modal-overlay').classList.remove('open');
+}
+
+// ---------------- HELP MODAL ----------------
+function openHelpModal(){
+  document.getElementById('help-modal-overlay').classList.add('open');
+}
+function closeHelpModal(){
+  document.getElementById('help-modal-overlay').classList.remove('open');
+}
+
+// ---------------- DELETE ACCOUNT ----------------
+async function confirmDeleteAccount(){
+  if(!(await showConfirm('This permanently deletes your account and everything in it. This cannot be undone. Continue?'))) return;
+  if(!(await showConfirm('Really sure? There is no way to recover your account after this.'))) return;
+  try{
+    const wSnap = await db.collection('users').doc(currentUser.uid).collection('workouts').get();
+    await Promise.all(wSnap.docs.map(d=>d.ref.delete()));
+    const fSnap = await db.collection('users').doc(currentUser.uid).collection('food').get();
+    await Promise.all(fSnap.docs.map(d=>d.ref.delete()));
+    await db.collection('users').doc(currentUser.uid).delete();
+    await currentUser.delete();
+    clearLocalDrafts();
+    localStorage.removeItem('forge_last_uid');
+    showToast('Account deleted.');
+  }catch(e){
+    console.error('confirmDeleteAccount error', e);
+    if(e.code === 'auth/requires-recent-login'){
+      showToast('For security, sign out and back in, then try deleting again right away.');
+    } else {
+      showToast('Something went wrong deleting your account — try again.');
+    }
+  }
 }
 
 // ---------------- PLANS (workout templates) ----------------
@@ -2734,7 +2808,16 @@ function copyClanInviteLink(btn){
 }
 
 // ---------------- FRIENDS ----------------
-function renderFriendsTab(){
+async function renderFriendsTab(){
+  if(!STATE.friendCode && currentUser){
+    // Backfill for accounts created before the friends feature existed
+    const code = generateFriendCode();
+    try{
+      await db.collection('users').doc(currentUser.uid).update({ friendCode: code });
+      STATE.friendCode = code;
+      persistLocalState();
+    }catch(e){ console.error('friendCode backfill error', e); }
+  }
   document.getElementById('friend-code-display').textContent = STATE.friendCode || '--------';
   loadFriends();
 }
@@ -2758,7 +2841,9 @@ function copyFriendCode(btn){
 async function submitCustomFriendCode(){
   const statusEl = document.getElementById('friend-code-status');
   const code = document.getElementById('custom-friend-code-input').value.trim().toUpperCase();
-  if(code.length !== 8){ statusEl.style.color = 'var(--red)'; statusEl.textContent = 'Custom codes must be exactly 8 characters.'; return; }
+  const isOverride = currentUser && CLAN_CREATE_OVERRIDE_EMAILS.includes((currentUser.email||'').toLowerCase());
+  const requiredLen = isOverride ? 4 : 8;
+  if(code.length !== requiredLen){ statusEl.style.color = 'var(--red)'; statusEl.textContent = 'Custom codes must be exactly '+requiredLen+' characters.'; return; }
   statusEl.style.color = 'var(--dim)'; statusEl.textContent = 'Checking availability...';
   try{
     const q = await withTimeout(db.collection('users').where('friendCode','==',code).limit(1).get(), 15000, 'Check code');
