@@ -88,6 +88,10 @@
   .card{ background:var(--panel); border:1px solid var(--line); border-radius:9px; padding:11px; margin-bottom:9px; }
 
   label{ font-size:9.5px; letter-spacing:1.2px; color:var(--dim); text-transform:uppercase; display:block; margin-bottom:4px; }
+  .muscle-suggestions{ display:flex; flex-wrap:wrap; gap:5px; margin:-4px 0 9px 0; }
+  .muscle-suggestions:empty{ display:none; margin:0; }
+  .muscle-chip{ background:var(--panel-raised); border:1px solid var(--line); color:var(--cyan); font-size:10.5px; padding:4px 9px; border-radius:12px; }
+  .muscle-chip:active{ transform:scale(0.95); }
   input, select{
     width:100%; background:#0A0F1C; border:1px solid var(--line); color:var(--text);
     border-radius:6px; padding:9px 10px; font-size:14px; font-family:'Space Mono',monospace;
@@ -356,6 +360,17 @@
   /* Profile modal */
   .profile-head{ display:flex; align-items:center; gap:12px; margin-bottom:20px; }
   .profile-avatar-lg{ width:48px; height:48px; border-radius:50%; background:var(--panel-raised); border:1px solid var(--line); object-fit:cover; }
+  .avatar-edit-btn{
+    position:absolute; bottom:-2px; right:-2px; width:20px; height:20px; border-radius:50%;
+    background:var(--amber); color:#1A1200; display:flex; align-items:center; justify-content:center;
+    border:2px solid var(--panel);
+  }
+  .avatar-crop-frame{
+    width:220px; height:220px; margin:0 auto; border-radius:50%; overflow:hidden; position:relative;
+    background:#000; border:2px solid var(--line); cursor:grab; touch-action:none;
+  }
+  .avatar-crop-frame:active{ cursor:grabbing; }
+  .avatar-crop-frame img{ position:absolute; top:50%; left:50%; max-width:none; user-select:none; -webkit-user-drag:none; }
   .profile-name{ font-family:'Chakra Petch',sans-serif; font-weight:600; font-size:16px; }
   .profile-email{ font-size:11px; color:var(--dim); margin-top:2px; }
   .danger-btn{ width:100%; background:transparent; border:1px solid var(--red); color:var(--red); font-weight:700; font-size:13px; padding:11px; border-radius:8px; }
@@ -656,13 +671,18 @@
       </div>
 
       <div id="clan-in-clan" style="display:none;">
-        <h2 class="section-title" id="clan-title-header">Clan</h2>
-        <div id="clan-banner-display" style="font-size:12px; color:var(--dim); margin:-4px 0 10px 0; display:none;"></div>
-        <button class="btn-ghost" id="clan-settings-btn" style="display:none; margin-bottom:12px;" onclick="openClanSettingsModal()">Clan Settings</button>
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:2px;">
+          <div style="min-width:0;">
+            <div id="clan-name-big" class="display" style="font-size:24px; font-weight:700; line-height:1.2;">Clan</div>
+            <div id="clan-created-by" style="font-size:11px; color:var(--dim); margin-top:3px;">Created by: --</div>
+          </div>
+          <button class="btn-ghost" id="clan-settings-btn" style="display:none; padding:6px 10px; font-size:10px; flex-shrink:0; white-space:nowrap;" onclick="openClanSettingsModal()">Settings</button>
+        </div>
+        <div id="clan-banner-display" style="font-size:12px; color:var(--dim); margin:4px 0 12px 0; display:none;"></div>
         <div class="card">
           <label>Invite Code</label>
           <div class="code-display">
-            <span class="code-text" id="clan-code-display">------</span>
+            <span class="code-text" id="clan-code-display" style="font-size:13px;">------</span>
             <button class="copy-btn" onclick="copyClanCode(this)">Copy</button>
           </div>
           <button class="btn-ghost" style="width:100%; margin-top:10px;" onclick="copyClanInviteLink(this)">Copy Invite Link</button>
@@ -744,7 +764,13 @@
       <button class="modal-close" onclick="closeProfileModal()">×</button>
       <div class="modal-handle"></div>
       <div class="profile-head">
-        <img class="profile-avatar-lg" id="profile-avatar" src="" alt="">
+        <div style="position:relative;">
+          <img class="profile-avatar-lg" id="profile-avatar" src="" alt="">
+          <button class="avatar-edit-btn" onclick="document.getElementById('avatar-file-input').click()" title="Change photo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+          </button>
+          <input type="file" id="avatar-file-input" accept="image/*" style="display:none;" onchange="handleAvatarFileSelect(event)">
+        </div>
         <div>
           <div class="profile-name" id="profile-name">--</div>
           <div class="profile-email" id="profile-email">--</div>
@@ -809,11 +835,38 @@
       <label>Name</label>
       <input id="custom-ex-name" placeholder="e.g. Cable Y-Raise">
       <label>Hits Directly</label>
-      <input id="custom-ex-direct" placeholder="e.g. Side Delts, Traps">
+      <input id="custom-ex-direct" placeholder="e.g. Side Delts, Traps" autocomplete="off" oninput="renderMuscleSuggestions('custom-ex-direct')" onfocus="renderMuscleSuggestions('custom-ex-direct')">
+      <div class="muscle-suggestions" id="custom-ex-direct-suggestions"></div>
       <label>Hits Indirectly</label>
-      <input id="custom-ex-indirect" placeholder="e.g. Rear Delts (optional)">
+      <input id="custom-ex-indirect" placeholder="e.g. Rear Delts (optional)" autocomplete="off" oninput="renderMuscleSuggestions('custom-ex-indirect')" onfocus="renderMuscleSuggestions('custom-ex-indirect')">
+      <div class="muscle-suggestions" id="custom-ex-indirect-suggestions"></div>
       <button class="btn-primary" style="background:var(--cyan); color:#062420;" onclick="submitCustomExercise()">Save Exercise</button>
       <div id="custom-ex-status" class="mono" style="font-size:11px; margin-top:8px; min-height:14px;"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="avatar-crop-modal-overlay" style="align-items:center;">
+    <div class="modal-sheet" style="border-radius:18px; max-width:320px; text-align:center;">
+      <div class="modal-title" style="margin-bottom:12px;">Adjust Photo</div>
+      <div class="avatar-crop-frame" id="avatar-crop-frame">
+        <img id="avatar-crop-img" src="" alt="" draggable="false">
+      </div>
+      <input type="range" id="avatar-zoom-slider" min="100" max="300" value="100" style="width:100%; margin:16px 0 6px 0;" oninput="updateAvatarCropTransform()">
+      <div style="font-size:11px; color:var(--dim); margin-bottom:14px;">Drag to reposition · pinch or slide to zoom</div>
+      <button class="btn-primary" onclick="saveAvatarCrop()">Save Photo</button>
+      <button class="btn-ghost" style="width:100%; margin-top:8px;" onclick="closeAvatarCropModal()">Cancel</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="member-profile-modal-overlay" style="align-items:center;" onclick="if(event.target===this) closeMemberProfileModal()">
+    <div class="modal-sheet" style="border-radius:18px; max-width:320px; text-align:center;">
+      <button class="modal-close" onclick="closeMemberProfileModal()">×</button>
+      <img id="member-profile-avatar" class="profile-avatar-lg" style="margin:0 auto 12px auto;" src="" alt="">
+      <div class="profile-name" id="member-profile-name" style="text-align:center;">--</div>
+      <div class="card" id="member-profile-stats" style="margin-top:14px; text-align:left;"></div>
+      <button class="btn-primary" id="member-profile-invite-btn" style="display:none; margin-top:14px;" onclick="inviteFriendToClan(memberProfileTargetUid, memberProfileTargetName)">Invite to Clan</button>
+      <button class="danger-btn" id="member-profile-remove-clan-btn" style="display:none; margin-top:14px;" onclick="removeMemberFromClan()">Remove from Clan</button>
+      <button class="danger-btn" id="member-profile-remove-friend-btn" style="display:none; margin-top:10px;" onclick="removeFriendFromModal()">Remove Friend</button>
     </div>
   </div>
 
@@ -1417,6 +1470,102 @@ function openProfileModal(){
 function closeProfileModal(){
   document.getElementById('profile-modal-overlay').classList.remove('open');
 }
+// ---------------- PROFILE PICTURE (upload, zoom/drag adjust, save as compressed data URI) ----------------
+// No Firebase Storage needed — the final cropped photo is compressed small enough to store
+// directly on the user doc, the same way everything else in this app already persists.
+let avatarCropState = { natW:0, natH:0, baseScale:1, zoom:1, dx:0, dy:0, dragging:false, startX:0, startY:0, startDx:0, startDy:0 };
+const AVATAR_FRAME_SIZE = 220;
+const AVATAR_OUTPUT_SIZE = 240;
+
+function handleAvatarFileSelect(e){
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const img = document.getElementById('avatar-crop-img');
+    img.onload = () => {
+      avatarCropState.natW = img.naturalWidth;
+      avatarCropState.natH = img.naturalHeight;
+      avatarCropState.baseScale = AVATAR_FRAME_SIZE / Math.min(img.naturalWidth, img.naturalHeight);
+      avatarCropState.zoom = 1; avatarCropState.dx = 0; avatarCropState.dy = 0;
+      img.style.width = (img.naturalWidth * avatarCropState.baseScale) + 'px';
+      img.style.height = (img.naturalHeight * avatarCropState.baseScale) + 'px';
+      document.getElementById('avatar-zoom-slider').value = 100;
+      updateAvatarCropTransform();
+      document.getElementById('avatar-crop-modal-overlay').classList.add('open');
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value = ''; // allow re-selecting the same file later
+}
+
+function avatarClampOffsets(){
+  const s = avatarCropState;
+  const dispW = s.natW * s.baseScale * s.zoom;
+  const dispH = s.natH * s.baseScale * s.zoom;
+  const maxX = Math.max(0, (dispW - AVATAR_FRAME_SIZE) / 2);
+  const maxY = Math.max(0, (dispH - AVATAR_FRAME_SIZE) / 2);
+  s.dx = Math.max(-maxX, Math.min(maxX, s.dx));
+  s.dy = Math.max(-maxY, Math.min(maxY, s.dy));
+}
+function updateAvatarCropTransform(){
+  avatarCropState.zoom = document.getElementById('avatar-zoom-slider').value / 100;
+  avatarClampOffsets();
+  const img = document.getElementById('avatar-crop-img');
+  img.style.transform = `translate(-50%,-50%) translate(${avatarCropState.dx}px, ${avatarCropState.dy}px) scale(${avatarCropState.zoom})`;
+}
+function closeAvatarCropModal(){
+  document.getElementById('avatar-crop-modal-overlay').classList.remove('open');
+}
+
+// Drag to reposition — pointer events cover both mouse and touch, delegated on document
+// so it works regardless of when the modal markup gets attached.
+document.addEventListener('pointerdown', (e)=>{
+  const frame = document.getElementById('avatar-crop-frame');
+  if(!frame || !frame.contains(e.target)) return;
+  avatarCropState.dragging = true;
+  avatarCropState.startX = e.clientX; avatarCropState.startY = e.clientY;
+  avatarCropState.startDx = avatarCropState.dx; avatarCropState.startDy = avatarCropState.dy;
+});
+document.addEventListener('pointermove', (e)=>{
+  if(!avatarCropState.dragging) return;
+  avatarCropState.dx = avatarCropState.startDx + (e.clientX - avatarCropState.startX);
+  avatarCropState.dy = avatarCropState.startDy + (e.clientY - avatarCropState.startY);
+  updateAvatarCropTransform();
+});
+document.addEventListener('pointerup', ()=>{ avatarCropState.dragging = false; });
+
+async function saveAvatarCrop(){
+  const s = avatarCropState;
+  const effectiveScale = s.baseScale * s.zoom;
+  const dispW = s.natW * effectiveScale, dispH = s.natH * effectiveScale;
+  const imgLeft = AVATAR_FRAME_SIZE/2 + s.dx - dispW/2;
+  const imgTop = AVATAR_FRAME_SIZE/2 + s.dy - dispH/2;
+  const srcX = (0 - imgLeft) / effectiveScale;
+  const srcY = (0 - imgTop) / effectiveScale;
+  const srcSize = AVATAR_FRAME_SIZE / effectiveScale;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = AVATAR_OUTPUT_SIZE; canvas.height = AVATAR_OUTPUT_SIZE;
+  const ctx = canvas.getContext('2d');
+  const img = document.getElementById('avatar-crop-img');
+  ctx.drawImage(img, srcX, srcY, srcSize, srcSize, 0, 0, AVATAR_OUTPUT_SIZE, AVATAR_OUTPUT_SIZE);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+
+  document.getElementById('profile-avatar').src = dataUrl;
+  document.getElementById('user-avatar').src = dataUrl;
+  closeAvatarCropModal();
+  try{
+    await currentUser.updateProfile({ photoURL: dataUrl });
+    await db.collection('users').doc(currentUser.uid).update({ photoURL: dataUrl });
+    showToast('Profile photo updated!');
+  }catch(e){
+    console.error('saveAvatarCrop error', e);
+    showToast('Saved locally, but couldn\'t sync — try again if it doesn\'t stick.');
+  }
+}
+
 async function saveDisplayName(){
   const name = document.getElementById('stat-name').value.trim();
   if(!name) return;
@@ -2933,12 +3082,12 @@ async function loadFriends(){
     const friends = [];  // accepted, either direction
     asFrom.docs.forEach(d=>{
       const data = d.data();
-      if(data.status==='accepted') friends.push({ uid: data.toUid, name: data.toName });
+      if(data.status==='accepted') friends.push({ uid: data.toUid, name: data.toName, connId: d.id });
       else if(data.status==='pending') outgoing.push({ id: d.id, name: data.toName });
     });
     asTo.docs.forEach(d=>{
       const data = d.data();
-      if(data.status==='accepted') friends.push({ uid: data.fromUid, name: data.fromName });
+      if(data.status==='accepted') friends.push({ uid: data.fromUid, name: data.fromName, connId: d.id });
       else if(data.status==='pending') incoming.push({ id: d.id, name: data.fromName });
     });
 
@@ -2981,16 +3130,18 @@ async function loadFriends(){
       const avatarHtml = photo
         ? `<img src="${photo}" alt="" class="friend-avatar">`
         : `<div class="friend-avatar friend-avatar-fallback">${escapeHtml((f.name||'?').charAt(0).toUpperCase())}</div>`;
+      f.photo = photo;
       return `
-      <div class="card" style="display:flex; align-items:center; justify-content:space-between; padding:12px 14px; margin-bottom:8px;">
+      <div class="card" style="display:flex; align-items:center; justify-content:space-between; padding:12px 14px; margin-bottom:8px; cursor:pointer;" onclick="openMemberProfileModal('${f.uid}','friend')">
         <div style="display:flex; align-items:center; gap:10px;">
           <div class="friend-avatar-wrap">${avatarHtml}${isOnline?'<span class="online-dot"></span>':''}</div>
           <span style="font-size:13px; font-weight:600;">${escapeHtml(f.name)}</span>
         </div>
-        <button class="btn-ghost" ${STATE.clanId ? '' : 'disabled style="opacity:0.4;"'} onclick="inviteFriendToClan('${f.uid}','${escapeHtml(f.name).replace(/'/g,"\\'")}')">${STATE.clanId ? 'Invite to Clan' : 'No Clan Yet'}</button>
+        <button class="btn-ghost" ${STATE.clanId ? '' : 'disabled style="opacity:0.4;"'} onclick="event.stopPropagation(); inviteFriendToClan('${f.uid}','${escapeHtml(f.name).replace(/'/g,"\\'")}')">${STATE.clanId ? 'Invite to Clan' : 'No Clan Yet'}</button>
       </div>
     `;
     }).join('');
+    currentFriendsCache = friends;
   }catch(e){ console.error('loadFriends error', e); el.innerHTML = '<div class="empty-state">Couldn\'t load friends — check your connection.</div>'; }
 }
 async function respondFriendRequest(connId, accept){
@@ -3255,6 +3406,81 @@ async function submitClanSettings(){
   }catch(e){ console.error('submitClanSettings error', e); statusEl.style.color = 'var(--red)'; statusEl.textContent = 'Something went wrong — try again.'; }
 }
 
+// ---------------- MEMBER / FRIEND PROFILE PANEL (shared modal, context-aware actions) ----------------
+let currentClanMembersCache = [];
+let currentFriendsCache = [];
+let memberProfileTargetUid = null;
+let memberProfileTargetName = null;
+let memberProfileTargetConnId = null; // set when opened from Friends, needed to remove the connection
+let memberProfileContext = 'clan'; // 'clan' | 'friend'
+
+async function openMemberProfileModal(uid, context){
+  context = context || 'clan';
+  const source = context==='clan' ? currentClanMembersCache : currentFriendsCache;
+  const m = source.find(x => x.uid === uid);
+  if(!m) return;
+  memberProfileTargetUid = uid;
+  memberProfileTargetName = m.name;
+  memberProfileTargetConnId = m.connId || null;
+  memberProfileContext = context;
+
+  document.getElementById('member-profile-avatar').src = m.photo || '';
+  document.getElementById('member-profile-name').textContent = m.name;
+  document.getElementById('member-profile-modal-overlay').classList.add('open');
+
+  let statsHtml = '';
+  if(context==='clan'){
+    statsHtml =
+      '<div class="stat-row"><span>Volume This Week</span><span>'+Math.round(m.volume).toLocaleString()+' lbs</span></div>' +
+      '<div class="stat-row"><span>Sessions This Week</span><span>'+m.sessions+'</span></div>';
+  }
+  statsHtml += '<div class="stat-row"><span>Current Clan</span><span id="member-profile-clan-name">Loading...</span></div>';
+  document.getElementById('member-profile-stats').innerHTML = statsHtml;
+
+  // Fetch fresh clan-membership info for whoever this is (works for either context)
+  try{
+    const snap = await db.collection('users').doc(uid).get();
+    const clanId = snap.exists ? snap.data().clanId : null;
+    let clanName = 'None';
+    if(clanId){
+      const clanSnap = await db.collection('clans').doc(clanId).get();
+      if(clanSnap.exists) clanName = clanSnap.data().name;
+    }
+    const el = document.getElementById('member-profile-clan-name');
+    if(el) el.textContent = clanName;
+  }catch(e){ console.error('member profile clan lookup error', e); const el = document.getElementById('member-profile-clan-name'); if(el) el.textContent = '--'; }
+
+  const isLeader = currentClanCache && currentUser && currentClanCache.ownerUid === currentUser.uid;
+  document.getElementById('member-profile-remove-clan-btn').style.display = (context==='clan' && isLeader && uid !== currentUser.uid) ? 'block' : 'none';
+  document.getElementById('member-profile-remove-friend-btn').style.display = (context==='friend') ? 'block' : 'none';
+  document.getElementById('member-profile-invite-btn').style.display = (context==='friend' && STATE.clanId) ? 'block' : 'none';
+}
+function closeMemberProfileModal(){
+  document.getElementById('member-profile-modal-overlay').classList.remove('open');
+}
+async function removeMemberFromClan(){
+  if(!memberProfileTargetUid || !STATE.clanId) return;
+  if(!(await showConfirm('Remove '+(memberProfileTargetName||'this member')+' from the clan?'))) return;
+  try{
+    await db.collection('clans').doc(STATE.clanId).update({
+      [`members.${memberProfileTargetUid}`]: firebase.firestore.FieldValue.delete()
+    });
+    closeMemberProfileModal();
+    showToast('Removed from clan.');
+    loadClan();
+  }catch(e){ console.error('removeMemberFromClan error', e); showToast('Couldn\'t remove them — try again.'); }
+}
+async function removeFriendFromModal(){
+  if(!memberProfileTargetConnId) return;
+  if(!(await showConfirm('Remove '+(memberProfileTargetName||'this friend')+' from your friends?'))) return;
+  try{
+    await db.collection('friendConnections').doc(memberProfileTargetConnId).delete();
+    closeMemberProfileModal();
+    showToast('Friend removed.');
+    loadFriends();
+  }catch(e){ console.error('removeFriendFromModal error', e); showToast('Couldn\'t remove them — try again.'); }
+}
+
 async function loadClan(){
   if(!STATE.clanId) return;
   showInClanView();
@@ -3263,7 +3489,9 @@ async function loadClan(){
     if(!clanSnap.exists){ STATE.clanId = null; showNoClanView(); return; }
     const clan = clanSnap.data();
     currentClanCache = clan; // used by the clan settings modal
-    document.getElementById('clan-title-header').textContent = clan.name;
+    document.getElementById('clan-name-big').textContent = clan.name;
+    const ownerName = (clan.members && clan.members[clan.ownerUid] && clan.members[clan.ownerUid].displayName) || 'Unknown';
+    document.getElementById('clan-created-by').textContent = 'Created by: ' + ownerName;
     document.getElementById('clan-code-display').textContent = clan.code;
     const bannerEl = document.getElementById('clan-banner-display');
     if(clan.banner){ bannerEl.textContent = clan.banner; bannerEl.style.display = 'block'; }
@@ -3290,6 +3518,7 @@ async function loadClan(){
       return { uid, name: info.displayName, photo: info.photoURL, volume, sessions };
     }));
     results.sort((a,b)=>b.volume-a.volume);
+    currentClanMembersCache = results;
 
     const board = document.getElementById('clan-leaderboard');
     if(results.length===0){
@@ -3297,11 +3526,11 @@ async function loadClan(){
       return;
     }
     board.innerHTML = results.map((r,i)=>`
-      <div class="leader-row">
+      <div class="leader-row" onclick="openMemberProfileModal('${r.uid}','clan')" style="cursor:pointer;">
         <div class="leader-rank ${i===0?'top':''}">${i+1}</div>
         <img class="leader-avatar" src="${r.photo}" alt="">
         <div class="leader-info">
-          <div class="leader-name ${r.uid===currentUser.uid?'me':''}">${escapeHtml(r.name)}</div>
+          <div class="leader-name ${r.uid===currentUser.uid?'me':''}">${r.uid===clan.ownerUid?'<svg viewBox="0 0 24 24" fill="var(--amber)" style="width:12px;height:12px;vertical-align:1px;margin-right:3px;"><path d="M2 18h20l-1.5-9-5 4-3.5-7-3.5 7-5-4z"/></svg>':''}${escapeHtml(r.name)}</div>
           <div class="leader-sub">${r.sessions} session${r.sessions!==1?'s':''} this week</div>
         </div>
         <div class="leader-val">${Math.round(r.volume).toLocaleString()} lbs</div>
@@ -3497,6 +3726,7 @@ function renderExerciseLibrary(){
         <div class="ex-info-name" ${e.cat==='Custom'?'style="color:var(--cyan);"':''}>${escapeHtml(e.name)}</div>
         <div class="ex-info-muscle">${e.direct.join(', ')}</div>
       </div>
+      ${e.cat==='Custom' ? `<button class="ex-add-btn" style="color:var(--red);" onclick="deleteCustomExercise('${e.id}')" title="Delete">×</button>` : ''}
       <button class="ex-add-btn" onclick="quickAddExercise('${e.id}')">+</button>
     </div>
   `).join('');
@@ -3519,6 +3749,8 @@ function openCustomExerciseModal(){
   document.getElementById('custom-ex-name').value = '';
   document.getElementById('custom-ex-direct').value = '';
   document.getElementById('custom-ex-indirect').value = '';
+  document.getElementById('custom-ex-direct-suggestions').innerHTML = '';
+  document.getElementById('custom-ex-indirect-suggestions').innerHTML = '';
   document.getElementById('custom-ex-status').textContent = '';
   document.getElementById('custom-exercise-modal-overlay').classList.add('open');
 }
@@ -3546,6 +3778,40 @@ async function submitCustomExercise(){
   closeCustomExerciseModal();
   renderExerciseLibrary();
   showToast('Custom exercise added: '+name);
+}
+
+const MUSCLE_LIST = ['Adductors','Biceps','Biceps (Long Head)','Brachialis','Calves','Calves (Soleus)','Cardiovascular','Chest','Core','Forearm Extensors','Forearm Flexors','Forearms','Front Delts','Glutes','Grip','Hamstrings','Hip Flexors','Hips','Inner/Outer Thigh','Lats','Legs','Lower Abs','Lower Back','Lower Chest','Mid Back','Mid Traps','Obliques','Quads','Rear Delts','Rectus Abdominis','Rhomboids','Rotator Cuff','Serratus Anterior','Shoulders','Side Delts','Traps','Triceps','Triceps (Long Head)','Upper Abs','Upper Back','Upper Chest'];
+
+function renderMuscleSuggestions(inputId){
+  const input = document.getElementById(inputId);
+  const suggEl = document.getElementById(inputId+'-suggestions');
+  if(!input || !suggEl) return;
+  const parts = input.value.split(',').map(s=>s.trim());
+  const current = parts[parts.length-1].toLowerCase();
+  const alreadyChosen = parts.slice(0,-1).map(s=>s.toLowerCase());
+  if(!current){ suggEl.innerHTML = ''; return; }
+  const matches = MUSCLE_LIST.filter(m => m.toLowerCase().includes(current) && !alreadyChosen.includes(m.toLowerCase())).slice(0,8);
+  if(matches.length===0){ suggEl.innerHTML = ''; return; }
+  suggEl.innerHTML = matches.map(m => `<button type="button" class="muscle-chip" onclick="selectMuscleSuggestion('${inputId}','${m.replace(/'/g,"\\'")}')">${m}</button>`).join('');
+}
+function selectMuscleSuggestion(inputId, muscle){
+  const input = document.getElementById(inputId);
+  const parts = input.value.split(',').map(s=>s.trim());
+  parts[parts.length-1] = muscle;
+  input.value = parts.filter(Boolean).join(', ') + ', ';
+  input.focus();
+  renderMuscleSuggestions(inputId);
+}
+
+async function deleteCustomExercise(exId){
+  if(!(await showConfirm('Delete this custom exercise?'))) return;
+  STATE.customExercises = (STATE.customExercises || []).filter(e => e.id !== exId);
+  persistLocalState();
+  try{
+    await db.collection('users').doc(currentUser.uid).update({ customExercises: STATE.customExercises });
+  }catch(e){ console.error('deleteCustomExercise error', e); }
+  renderExerciseLibrary();
+  showToast('Custom exercise deleted.');
 }
 
 // Add straight from library list (quick add: pushes into workout builder or the plan being edited)
