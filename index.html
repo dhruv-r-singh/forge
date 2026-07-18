@@ -40,6 +40,11 @@
   body[data-theme="mono"]{ --bg:#0A0A0A; --panel:#161616; --panel-raised:#1E1E1E90; --line:#333333; --amber:#F2F2F2; --cyan:#9A9A9A; }
   body[data-theme="blossom"]{ --bg:#1A0E14; --panel:#26151E; --panel-raised:#2E1A2590; --line:#3D2530; --amber:#FF7FA8; --cyan:#FFB3D9; }
   body[data-theme="ocean"]{ --bg:#061420; --panel:#0D2333; --panel-raised:#122C4090; --line:#1B3A52; --amber:#3FC9E8; --cyan:#7FE8C9; }
+  body[data-theme="cream"]{
+    --bg:#F5EBDE; --panel:#EDE0CB; --panel-raised:#E4D4B890; --line:#D8C4A0;
+    --amber:#8A5638; --cyan:#7D8B5A; --red:#B8453A;
+    --text:#3A2A1F; --dim:#8A7A5D; --dimmer:#B5A585;
+  }
   body[data-theme="toxic"]{ --bg:#0A0F08; --panel:#141C10; --panel-raised:#1B270F90; --line:#2A3B1C; --amber:#C8FF4D; --cyan:#8AFF7A; }
   *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
   html,body{margin:0; padding:0; background:var(--bg); color:var(--text); font-family:'Plus Jakarta Sans',sans-serif; height:100%; overflow-x:hidden;}
@@ -248,6 +253,7 @@
   .hamburger-item:hover{ background:var(--panel-raised); }
   .user-info{ display:flex; align-items:center; gap:8px; }
   .user-avatar{ width:26px; height:26px; border-radius:50%; background:var(--panel-raised); border:1px solid var(--line); object-fit:cover; }
+  .avatar-fallback{ display:flex !important; align-items:center; justify-content:center; font-family:'Chakra Petch',sans-serif; font-weight:700; font-size:13px; color:var(--amber); background:var(--panel-raised) !important; overflow:hidden; }
   .friend-avatar-wrap{ position:relative; flex-shrink:0; }
   .friend-avatar{ width:34px; height:34px; border-radius:50%; background:var(--panel-raised); border:1px solid var(--line); object-fit:cover; display:block; }
   .friend-avatar-fallback{ display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:var(--dim); font-family:'Chakra Petch',sans-serif; }
@@ -465,7 +471,7 @@
   <div class="hud">
     <div class="user-strip" style="display:flex; align-items:center; justify-content:space-between;">
       <div class="user-info" onclick="openProfileModal()" style="cursor:pointer;">
-        <img class="user-avatar" id="user-avatar" src="" alt="">
+        <span id="user-avatar-wrap"><img class="user-avatar" id="user-avatar" src="" alt=""></span>
         <span class="user-name" id="user-name-label">--</span>
       </div>
       <button class="hamburger-btn" onclick="toggleHamburgerMenu()">☰</button>
@@ -766,7 +772,7 @@
       <div class="modal-handle"></div>
       <div class="profile-head">
         <div style="position:relative;">
-          <img class="profile-avatar-lg" id="profile-avatar" src="" alt="">
+          <span id="profile-avatar-wrap"><img class="profile-avatar-lg" id="profile-avatar" src="" alt=""></span>
           <button class="avatar-edit-btn" onclick="document.getElementById('avatar-file-input').click()" title="Change photo">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
           </button>
@@ -862,7 +868,7 @@
   <div class="modal-overlay" id="member-profile-modal-overlay" style="align-items:center;" onclick="if(event.target===this) closeMemberProfileModal()">
     <div class="modal-sheet" style="border-radius:18px; max-width:320px; text-align:center;">
       <button class="modal-close" onclick="closeMemberProfileModal()">×</button>
-      <img id="member-profile-avatar" class="profile-avatar-lg" style="margin:0 auto 12px auto;" src="" alt="">
+      <span id="member-profile-avatar-wrap" style="display:block; width:48px; margin:0 auto 12px auto;"><img id="member-profile-avatar" class="profile-avatar-lg" src="" alt=""></span>
       <div class="profile-name" id="member-profile-name" style="text-align:center;">--</div>
       <div class="card" id="member-profile-stats" style="margin-top:14px; text-align:left;"></div>
       <button class="btn-primary" id="member-profile-invite-btn" style="display:none; margin-top:14px;" onclick="inviteFriendToClan(memberProfileTargetUid, memberProfileTargetName)">Invite to Clan</button>
@@ -960,7 +966,7 @@
 // ---------------- FIREBASE ----------------
 const firebaseConfig = {
   apiKey: "AIzaSyB3SOG984SYtUyLmW4YyaknqcMpdj29i_0",
-  authDomain: "test123-drub.firebaseapp.com",
+  authDomain: "auth.dhruvrsingh.com",
   projectId: "test123-drub",
   storageBucket: "test123-drub.firebasestorage.app",
   messagingSenderId: "883783514244",
@@ -1283,6 +1289,7 @@ let STATE = {
   achievements: {},
   friendCode: '',
   customExercises: [],
+  photoURL: '',
 };
 
 // ---------------- LOCAL PERSISTENCE (autosave everything, even offline) ----------------
@@ -1425,6 +1432,7 @@ const THEMES = [
   {id:'blossom', name:'Blossom', c1:'#FF7FA8', c2:'#FFB3D9'},
   {id:'ocean', name:'Ocean', c1:'#3FC9E8', c2:'#7FE8C9'},
   {id:'toxic', name:'Toxic', c1:'#C8FF4D', c2:'#8AFF7A'},
+  {id:'cream', name:'Cream', c1:'#8A5638', c2:'#7D8B5A'},
 ];
 let currentTheme = loadDraft('forge_theme', 'forge');
 // If someone opened an invite link (?join=CODE), remember it so we can prefill/auto-navigate once logged in
@@ -1455,7 +1463,7 @@ function setTheme(id, skipSave){
 
 // ---------------- PROFILE MODAL ----------------
 function openProfileModal(){
-  document.getElementById('profile-avatar').src = currentUser.photoURL || '';
+  refreshAllAvatars();
   document.getElementById('profile-name').textContent = currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : (currentUser.phoneNumber || 'Athlete'));
   document.getElementById('profile-email').textContent = currentUser.email || currentUser.phoneNumber || '';
   const stats = STATE.stats || {};
@@ -1554,17 +1562,24 @@ async function saveAvatarCrop(){
   ctx.drawImage(img, srcX, srcY, srcSize, srcSize, 0, 0, AVATAR_OUTPUT_SIZE, AVATAR_OUTPUT_SIZE);
   const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
 
-  document.getElementById('profile-avatar').src = dataUrl;
-  document.getElementById('user-avatar').src = dataUrl;
+  STATE.photoURL = dataUrl;
+  refreshAllAvatars();
   closeAvatarCropModal();
+
+  // Firestore is the actual source of truth for the photo — save this first and independently.
+  // Firebase Auth's own photoURL field is meant for a short URL, not embedded image data, and
+  // reliably rejects something this size — so it's treated as best-effort below, not required.
   try{
-    await currentUser.updateProfile({ photoURL: dataUrl });
     await db.collection('users').doc(currentUser.uid).update({ photoURL: dataUrl });
     showToast('Profile photo updated!');
   }catch(e){
-    console.error('saveAvatarCrop error', e);
-    showToast('Saved locally, but couldn\'t sync — try again if it doesn\'t stick.');
+    console.error('saveAvatarCrop Firestore error', e);
+    showToast('Couldn\'t save your photo — check your connection and try again.');
+    return;
   }
+  currentUser.updateProfile({ photoURL: dataUrl }).catch(e=>{
+    console.error('saveAvatarCrop auth profile sync error (non-blocking)', e);
+  });
 }
 
 async function saveDisplayName(){
@@ -1990,6 +2005,7 @@ async function loadState(){
     STATE.achievements = udata.achievements || {};
     STATE.friendCode = udata.friendCode || '';
     STATE.customExercises = udata.customExercises || [];
+    STATE.photoURL = udata.photoURL || '';
     STATE.onboarded = udata.onboarded !== false; // undefined counts as onboarded (pre-existing accounts)
     if(udata.theme) setTheme(udata.theme, true);
   }catch(e){ console.error('loadState user doc error', e); }
@@ -3128,9 +3144,7 @@ async function loadFriends(){
       const d = friendDocs[i] && friendDocs[i].exists ? friendDocs[i].data() : {};
       const photo = d.photoURL || '';
       const isOnline = d.lastActive && (now - d.lastActive) < ONLINE_THRESHOLD_MS;
-      const avatarHtml = photo
-        ? `<img src="${photo}" alt="" class="friend-avatar">`
-        : `<div class="friend-avatar friend-avatar-fallback">${escapeHtml((f.name||'?').charAt(0).toUpperCase())}</div>`;
+      const avatarHtml = avatarOrInitialHtml(photo, f.name, 'friend-avatar');
       f.photo = photo;
       return `
       <div class="card" style="display:flex; align-items:center; justify-content:space-between; padding:12px 14px; margin-bottom:8px; cursor:pointer;" onclick="openMemberProfileModal('${f.uid}','friend')">
@@ -3425,7 +3439,7 @@ async function openMemberProfileModal(uid, context){
   memberProfileTargetConnId = m.connId || null;
   memberProfileContext = context;
 
-  document.getElementById('member-profile-avatar').src = m.photo || '';
+  document.getElementById('member-profile-avatar-wrap').innerHTML = avatarOrInitialHtml(m.photo, m.name, 'profile-avatar-lg');
   document.getElementById('member-profile-name').textContent = m.name;
   document.getElementById('member-profile-modal-overlay').classList.add('open');
 
@@ -3529,7 +3543,7 @@ async function loadClan(){
     board.innerHTML = results.map((r,i)=>`
       <div class="leader-row" onclick="openMemberProfileModal('${r.uid}','clan')" style="cursor:pointer;">
         <div class="leader-rank ${i===0?'top':''}">${i+1}</div>
-        <img class="leader-avatar" src="${r.photo}" alt="">
+        ${avatarOrInitialHtml(r.photo, r.name, 'leader-avatar')}
         <div class="leader-info">
           <div class="leader-name ${r.uid===currentUser.uid?'me':''}">${r.uid===clan.ownerUid?'<svg viewBox="0 0 24 24" fill="var(--amber)" style="width:12px;height:12px;vertical-align:1px;margin-right:3px;"><path d="M2 18h20l-1.5-9-5 4-3.5-7-3.5 7-5-4z"/></svg>':''}${escapeHtml(r.name)}</div>
           <div class="leader-sub">${r.sessions} session${r.sessions!==1?'s':''} this week</div>
@@ -3550,6 +3564,22 @@ async function loadClan(){
   }catch(e){ console.error('loadClan error', e); document.getElementById('clan-leaderboard').innerHTML = '<div class="empty-state">Couldn\'t load the clan — check your connection and try again.</div>'; }
 }
 
+// Returns HTML for either a real photo, or a clean initial-letter fallback — used everywhere
+// an avatar shows (HUD, My Profile, Clan leaderboard, Friends, member panels).
+function avatarOrInitialHtml(photoURL, name, sizeClass){
+  if(photoURL) return `<img src="${photoURL}" alt="" class="${sizeClass}">`;
+  const initial = (name||'?').trim().charAt(0).toUpperCase() || '?';
+  return `<div class="${sizeClass} avatar-fallback">${escapeHtml(initial)}</div>`;
+}
+function refreshAllAvatars(){
+  const photo = STATE.photoURL || (currentUser && currentUser.photoURL) || '';
+  const name = (currentUser && currentUser.displayName) || 'Athlete';
+  const hudEl = document.getElementById('user-avatar-wrap');
+  if(hudEl) hudEl.innerHTML = avatarOrInitialHtml(photo, name, 'user-avatar');
+  const profileEl = document.getElementById('profile-avatar-wrap');
+  if(profileEl) profileEl.innerHTML = avatarOrInitialHtml(photo, name, 'profile-avatar-lg');
+}
+
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
@@ -3560,6 +3590,7 @@ function renderAll(){
   renderWorkoutHistory();
   renderFoodToday();
   populateExerciseSelect();
+  refreshAllAvatars();
   document.getElementById('t-cal').value = STATE.targets.calories;
   document.getElementById('t-pro').value = STATE.targets.protein;
   document.getElementById('t-fat').value = STATE.targets.fat;
